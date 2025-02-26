@@ -22,11 +22,20 @@ export function convertToDevExpressFormat(ast, variables = []) {
     throw new Error(`Unsupported AST node: ${ast.type}`);
 }
 
+// TODO: Implement the convertValue function to handle placeholders and variables
 function convertValue(val, variables) {
     if (typeof val === "object" && val.type === "placeholder") {
         return `{${val.value}}`;
     }
     if(typeof val.value === "object" && val.value.length > 0){
+
+        val.value.map((item, index) => {
+            if(item.type === "placeholder"){
+                val.value[index] = `{${item.value}}`;
+            }
+            return item;
+        })
+
         return val.value;
     }
     return val;

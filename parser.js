@@ -66,7 +66,7 @@ function parse(tokens,variables) {
     function parseValue(operatorToken) {
         const token = tokens[index++];
         if (token.type === "number") return Number(token.value);
-        if (token.type === "string") return token.value.slice(1, -1).replace(/''/g, "'"); // Handle escaped quotes
+        if (token.type === "string") return token.value.slice(1, -1).replace(/''/g, ""); // Handle escaped quotes
         if (token.type === "identifier") return token.value;
         if (token.type === "placeholder") {
             let val = token.value.slice(1, -1);
