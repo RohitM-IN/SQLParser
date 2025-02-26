@@ -2,7 +2,10 @@ export function convertToDevExpressFormat(ast, variables = []) {
     if (!ast) return null;
 
     if (ast.type === "comparison") {
-        return [convertValue(ast.field), ast.operator, convertValue(ast.value, variables)];
+        if(ast.operator.toLowerCase() === "is"){
+            ast.operator = "=";
+        }
+        return [convertValue(ast.field), ast.operator.toLowerCase(), convertValue(ast.value, variables)];
     } else if (ast.type === "logical") {
         return [
             convertToDevExpressFormat(ast.left, variables),
@@ -19,9 +22,12 @@ export function convertToDevExpressFormat(ast, variables = []) {
     throw new Error(`Unsupported AST node: ${ast.type}`);
 }
 
-function convertValue(value, variables) {
-    if (typeof value === "object" && value.type === "placeholder") {
-        return `{${value.value}}`;
+function convertValue(val, variables) {
+    if (typeof val === "object" && val.type === "placeholder") {
+        return `{${val.value}}`;
     }
-    return value;
+    if(typeof val.value === "object" && val.value.length > 0){
+        return val.value;
+    }
+    return val;
 }

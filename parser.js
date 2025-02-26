@@ -47,11 +47,15 @@ function parse(tokens,variables) {
             return { type: "value", value: value }
         }
 
+        if (tokens[index]?.type == 'null') {
+            return { type: "value", value: null }
+        }
+
         const field = parseValue();
         const operatorToken = tokens[index];
         if (operatorToken?.type === "operator") {
             index++;
-            const value = parseValue();
+            const value = parseValue(operatorToken);
             return { type: "comparison", field, operator: operatorToken.value, value };
         }
 
@@ -59,7 +63,7 @@ function parse(tokens,variables) {
         throw new Error(`Unexpected token: ${tokens[index]?.value}`);
     }
 
-    function parseValue() {
+    function parseValue(operatorToken) {
         const token = tokens[index++];
         if (token.type === "number") return Number(token.value);
         if (token.type === "string") return token.value.slice(1, -1).replace(/''/g, "'"); // Handle escaped quotes
@@ -72,6 +76,30 @@ function parse(tokens,variables) {
 
             return { type: "placeholder", value: val }
         };
+        if(token.type === "null") return null;
+       
+        // TODO: handle IN operator properly without looping here
+        if(operatorToken && operatorToken.value == 'IN'){
+            let values = [];
+            for (let i = index; i <= tokens.length; i++) {
+                const element = tokens[i];
+                if (tokens[i]?.value !== ")") {
+
+                    if (tokens[i]?.type === "comma") {
+                        index++;
+                        continue;
+                    };
+
+                    let value = parseValue();
+                    values.push(value);
+                    
+                }else{
+                    break;
+                }
+            }
+            return { type: "value", value: values }
+            // return parseExpression();
+        }
         throw new Error(`Unexpected value: ${token.value}`);
     }
 
