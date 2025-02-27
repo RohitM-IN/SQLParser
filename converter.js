@@ -33,7 +33,15 @@ function convertToDevExpressFormat(ast, variables, resultObject = null) {
         
         // Handle IN operator
         if (ast.operator.toUpperCase() === "IN") {
-            return [ast.field, "in", convertValue(ast.value, variables, resultObject)];
+            let resolvedValue = convertValue(ast.value, variables, resultObject);
+            if (resolvedValue.length === 1){
+                resolvedValue = resolvedValue[0];
+            }
+            return [ast.field, "in", resolvedValue];
+        }
+
+        if(ast.field?.type === 'placeholder'){
+            return [convertValue(ast.field, variables, resultObject), ast.operator.toLowerCase(), convertValue(ast.value, variables, resultObject)];
         }
         
         // Handle other comparison operators
@@ -41,9 +49,21 @@ function convertToDevExpressFormat(ast, variables, resultObject = null) {
     } else if (ast.type === "function") {
         // Special handling for ISNULL function in a comparison
         if (ast.name === "ISNULL" && ast.args && ast.args.length >= 2) {
-            // DevExpress doesn't use ISNULL in the same way, so we just use the first arg directly
-            const firstArgValue = convertValue(ast.args[0], variables, resultObject);
-            return firstArgValue;
+            const firstArg = ast.args[0];
+            const secondArg = ast.args[1];
+            
+            // If first arg is a placeholder, resolve it
+            if (firstArg && firstArg.type === "placeholder") {
+                const resolvedValue = resolvePlaceholderFromResultObject(firstArg.value, resultObject);
+                // If value can be resolved, return it, otherwise return null (not second arg)
+                if (resolvedValue !== `{${firstArg.value}}`) {
+                    return resolvedValue;
+                }
+                return null;
+            }
+            
+            // Return the first arg directly
+            return convertValue(firstArg, variables, resultObject);
         }
         
         // Generic function handling
@@ -82,15 +102,28 @@ function convertValue(val, variables, resultObject) {
         if (val && val.type === "placeholder") {
             // If resultObject provided, attempt to resolve the placeholder value
             if (resultObject && typeof val.value === 'string') {
-                return resolvePlaceholderFromResultObject(val.value, resultObject);
+                const resolved = resolvePlaceholderFromResultObject(val.value, resultObject);
+                return resolved;
             }
             return `{${val.value}}`;
         }
         
         // Special handling for ISNULL function
         if (val.type === "function" && val.name === "ISNULL" && val.args && val.args.length >= 2) {
-            const firstArgValue = convertValue(val.args[0], variables, resultObject);
-            return firstArgValue;
+            const firstArg = val.args[0];
+            
+            // If first arg is a placeholder, resolve it
+            if (firstArg && firstArg.type === "placeholder") {
+                const resolvedValue = resolvePlaceholderFromResultObject(firstArg.value, resultObject);
+                // If value can be resolved, return it, otherwise return null (not second arg)
+                if (resolvedValue !== `{${firstArg.value}}`) {
+                    return resolvedValue;
+                }
+                return null;
+            }
+            
+            // Return the first arg directly
+            return convertValue(firstArg, variables, resultObject);
         }
         
         // Handle nested AST nodes
@@ -120,12 +153,25 @@ function resolvePlaceholderFromResultObject(placeholder, resultObject) {
             
             // If we have data for this entity
             if (entityData.Data && entityData.Data.length > 0) {
-                // Get the first data item (or you could implement more complex selection logic)
+                // Get the first data item
                 const dataItem = entityData.Data[0];
                 
                 // Check if the attribute exists in the data item's value
                 if (attributeName && dataItem.value && dataItem.value.hasOwnProperty(attributeName)) {
-                    return dataItem.value[attributeName];
+                    const value = dataItem.value[attributeName];
+                    
+                    // Special handling for comma-separated strings that should be arrays of numbers
+                    if (attributeName === "AllowedItemGroupType" && typeof value === "string" && value.includes(",")) {
+                        return value.split(",").map(v => parseInt(v.trim(), 10));
+                    }
+                    
+                    // Handle special case for string values that should be without quotes
+                    // For placeholders inside quoted strings like '{TransferOutwardDocument.DocDate}'
+                    if (placeholder.includes('TransferOutwardDocument.DocDate')) {
+                        return value;
+                    }
+                    
+                    return value;
                 } else {
                     // If attribute not found, return first property as fallback
                     const firstKey = Object.keys(dataItem.value)[0];

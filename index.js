@@ -21,6 +21,6 @@ export function parseFilterString(sql, resultObject = null) {
 }
 
 
-var devexpress = parseFilterString("ID IN ({WorkOrderLine.ApplicableUoms}) AND (CompanyID = {WorkOrderDocument.CompanyID})",sampleResultObject);
+var devexpress = parseFilterString("'{TransferOutwardDocument.DocDate}'",sampleResultObject);
 
 console.log("devexpress:", JSON.stringify(devexpress, null, 2));

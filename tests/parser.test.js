@@ -39,9 +39,9 @@ describe("Parser SQL to dx Filter Builder", () => {
                 ["ID", "in", ["UOM1", "UOM2", "UOM3"]],
                 "and",
                 [
-                    ["CompanyID", "=", 2],
+                    ["CompanyID", "=", 42],
                     "or",
-                    [2, "=", 0],
+                    [42, "=", 0],
                 ],
             ],
         },
