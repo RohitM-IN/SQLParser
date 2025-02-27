@@ -12,7 +12,7 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 ["ID", "=", 42],
                 "or",
-                [42, "=", 0], // TODO: This should be ["{CoreEntity0022.CompanyGroupID}", "=", null]
+                [42, "=", null], 
             ],
         },
         {
@@ -20,7 +20,7 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 ["GroupNo", "=", 0],
                 "or",
-                ["GroupNo", "=", 0], // TODO: This should be ["GroupNo", "=", null]
+                ["GroupNo", "=", null],
                 "or",
                 [0, "=", 0],
             ],
