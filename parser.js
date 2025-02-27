@@ -1,16 +1,18 @@
-const precedence = { "OR": 1, "AND": 2, "=": 3, "!=": 3, ">": 3, "<": 3, ">=": 3, "<=": 3 };
+const precedence = { "OR": 1, "AND": 2, "=": 3, "!=": 3, ">": 3, "<": 3, ">=": 3, "<=": 3, "IN": 3, "<>": 3, "LIKE": 3, "IS": 3, "BETWEEN": 3 };
 
-function parse(tokens,variables) {
+function parse(tokens, variables) {
     let index = 0;
 
-    // Modified parseExpression function in parser.js
     function parseExpression(minPrecedence = 0) {
         let left = parseTerm();
+        
         while (index < tokens.length) {
             const token = tokens[index];
             if (token.type !== "operator" || precedence[token.value.toUpperCase()] < minPrecedence) break;
+            
             const operator = token.value.toUpperCase();
             index++; // Advance index after operator
+            
             const right = parseExpression(precedence[operator]);
             left = { type: "logical", operator, left, right };
         }
@@ -18,6 +20,7 @@ function parse(tokens,variables) {
     }
 
     function parseTerm() {
+        // Handle parenthesized expressions
         if (tokens[index]?.value === "(") {
             index++;
             const expr = parseExpression();
@@ -34,76 +37,71 @@ function parse(tokens,variables) {
             index++;
             const args = [];
             while (tokens[index]?.value !== ")") {
-                args.push(parseValue());
+                args.push(parseExpression());
                 if (tokens[index]?.value === ",") index++;
             }
             index++; // Consume )
             return { type: "function", name: funcName, args };
         }
 
-        if (tokens[index]?.type == 'number' || tokens[index]?.type == 'string') {
+        // Handle literal values (number, string, null)
+        if (tokens[index]?.type === 'number' || tokens[index]?.type === 'string' || tokens[index]?.type === 'null') {
             const value = parseValue();
-
-            return { type: "value", value: value }
+            return { type: "value", value: value };
         }
 
-        if (tokens[index]?.type == 'null') {
-            return { type: "value", value: null }
-        }
-
+        // Handle field comparisons
         const field = parseValue();
         const operatorToken = tokens[index];
+        
         if (operatorToken?.type === "operator") {
             index++;
             const value = parseValue(operatorToken);
             return { type: "comparison", field, operator: operatorToken.value, value };
         }
 
-
-        throw new Error(`Unexpected token: ${tokens[index]?.value}`);
+        return { type: "field", value: field };
     }
 
     function parseValue(operatorToken) {
         const token = tokens[index++];
+        
+        if (!token) throw new Error("Unexpected end of input");
+        
         if (token.type === "number") return Number(token.value);
-        if (token.type === "string") return token.value.slice(1, -1).replace(/''/g, ""); // Handle escaped quotes
+        if (token.type === "string") return token.value.slice(1, -1).replace(/''/g, "");
         if (token.type === "identifier") return token.value;
+        if (token.type === "null") return null;
+        
         if (token.type === "placeholder") {
             let val = token.value.slice(1, -1);
-
-            if(!variables.includes(val))
+            if (!variables.includes(val)) {
                 variables.push(val);
-
-            return { type: "placeholder", value: val }
-        };
-        if(token.type === "null") return null;
-       
-        // TODO: handle IN operator properly without looping here
-        if(operatorToken && operatorToken.value == 'IN'){
-            let values = [];
-            for (let i = index; i <= tokens.length; i++) {
-                const element = tokens[i];
-                if (tokens[i]?.value !== ")") {
-
-                    if (tokens[i]?.type === "comma") {
-                        index++;
-                        continue;
-                    };
-
-                    let value = parseValue();
-                    values.push(value);
-                    
-                }else{
-                    break;
-                }
             }
-            return { type: "value", value: values }
-            // return parseExpression();
+            return { type: "placeholder", value: val };
         }
+        
+        // Handle IN operator
+        if (operatorToken && operatorToken.value.toUpperCase() === 'IN') {
+            if (tokens[index-1]?.value !== "(") throw new Error("Expected ( after IN");
+            
+            let values = [];
+            while (index < tokens.length && tokens[index]?.value !== ")") {
+                if (tokens[index]?.type === "comma") {
+                    index++;
+                    continue;
+                }
+                values.push(parseValue());
+            }
+            
+            if (tokens[index]?.value === ")") index++; // Consume closing parenthesis
+            return { type: "value", value: values };
+        }
+        
         throw new Error(`Unexpected value: ${token.value}`);
     }
 
-    return {ast: parseExpression(), variables};
+    return { ast: parseExpression(), variables };
 }
 
 export { parse };

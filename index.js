@@ -20,6 +20,6 @@ export function parseFilterString(sql) {
 }
 
 
-var devexpress = parseFilterString("ID IN ({WorkOrderLine.ApplicableUoms}) AND (CompanyID = {WorkOrderDocument.CompanyID})");
+var devexpress = parseFilterString("((ISNULL({0}, 0) = 0 AND CompanyID = {1}) OR CompanyID IS NULL) OR BranchID = {0}");
 
 console.log("devexpress:", JSON.stringify(devexpress, null, 2));

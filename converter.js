@@ -24,6 +24,9 @@ export function convertToDevExpressFormat(ast, variables = []) {
 
 // TODO: Implement the convertValue function to handle placeholders and variables
 function convertValue(val, variables) {
+    if(val == null){
+        return null;
+    }
     if (typeof val === "object" && val.type === "placeholder") {
         return `{${val.value}}`;
     }
