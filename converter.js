@@ -5,26 +5,36 @@
  * @param {Object} resultObject - Optional ResultObject for placeholder resolution
  * @returns {Array} DevExpress format filter
  */
-function convertToDevExpressFormat(ast, variables, resultObject = null) {
+function convertToDevExpressFormat(ast, variables, resultObject = null, parentOperator = null) {
     if (!ast) return null;
 
     if (ast.type === "logical") {
         // Handle logical operators (AND, OR)
         const operator = ast.operator.toLowerCase();
-        if (operator === "and" || operator === "or") {
-            return [
-                convertToDevExpressFormat(ast.left, variables, resultObject),
-                operator,
-                convertToDevExpressFormat(ast.right, variables, resultObject)
-            ];
-        } else {
-            // Handle other operators (=, >, <, etc.)
-            return [
-                convertToDevExpressFormat(ast.left, variables, resultObject),
-                operator,
-                convertToDevExpressFormat(ast.right, variables, resultObject)
-            ];
+        const left = convertToDevExpressFormat(ast.left, variables, resultObject,operator);
+        const right = convertToDevExpressFormat(ast.right, variables, resultObject,operator);
+
+        if (parentOperator !== null && operator === parentOperator || ast.operator === ast.right?.operator) {
+            let parts = [];
+            if (Array.isArray(left) && left[1] === operator) {
+                parts = parts.concat(left);
+            } else {
+                parts.push(left);
+            }
+            parts.push(operator);
+            if (Array.isArray(right) && right[1] === operator) {
+                parts = parts.concat(right);
+            } else {
+                parts.push(right);
+            }
+            return parts;
         }
+
+        return [
+            left,
+            operator,
+            right
+        ];
     } else if (ast.type === "comparison") {
         // Handle special case for IS NULL
         if (ast.operator.toUpperCase() === "IS" && ast.value === null) {

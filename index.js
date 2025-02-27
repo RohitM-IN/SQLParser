@@ -21,6 +21,6 @@ export function parseFilterString(sql, resultObject = null) {
 }
 
 
-var devexpress = parseFilterString("'{TransferOutwardDocument.DocDate}'",sampleResultObject);
+var devexpress = parseFilterString("CompanyID = {TransferOutwardDocument.CompanyID}  OR {TransferOutwardDocument.CompanyID} = 0 OR CompanyID is NULL",sampleResultObject);
 
 console.log("devexpress:", JSON.stringify(devexpress, null, 2));

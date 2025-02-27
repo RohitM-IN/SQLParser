@@ -20,9 +20,9 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 ["GroupNo", "=", 0],
                 "or",
-                [["GroupNo", "=", 0], // TODO: This should be ["GroupNo", "=", null]
+                ["GroupNo", "=", 0], // TODO: This should be ["GroupNo", "=", null]
                 "or",
-                [0, "=", 0]],
+                [0, "=", 0],
             ],
         },
         {
