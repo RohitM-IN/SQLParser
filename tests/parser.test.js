@@ -121,10 +121,10 @@ describe("Parser SQL to dx Filter Builder", () => {
                 [ "BranchID", "=",  42 ]
             ]
         },
-        // {
-        //     input: "SELECT DISTINCT OP.DocID ID,OP.DocName,OP.DocType,OP.DocName [Work Purchase Order],OP.DocDate DocDate,SP.WoStatus,OP.DocDate [Work Purchase Order Date], OP.CompanyID,      cast(cast(OP.DocDate as date) as varchar(10)) DocumentDate        FROM OpenDocuments OP      inner join PurchaseHeader PH on PH.Id=op.DocID       inner JOIN PurchasePosting PP ON PP.DocID = PH.ID       inner JOIN SalePosting SP ON SP.PurchasePostingLineID = PP.ID",
-        //     expect: null
-        // }
+        {
+            input: "SELECT DISTINCT OP.DocID ID,OP.DocName,OP.DocType,OP.DocName [Work Purchase Order],OP.DocDate DocDate,SP.WoStatus,OP.DocDate [Work Purchase Order Date], OP.CompanyID,      cast(cast(OP.DocDate as date) as varchar(10)) DocumentDate        FROM OpenDocuments OP      inner join PurchaseHeader PH on PH.Id=op.DocID       inner JOIN PurchasePosting PP ON PP.DocID = PH.ID       inner JOIN SalePosting SP ON SP.PurchasePostingLineID = PP.ID",
+            expect: null
+        }
     ];
 
     testCases.forEach(({ input, expected }, index) => {
@@ -141,8 +141,15 @@ describe("Parser SQL to dx Filter Builder", () => {
             }
 
             let { sanitizedSQL, variables } = sanitizeQuery(input);
+            let tokens = null;
 
-            const tokens = tokenize(sanitizedSQL);
+            try{
+                tokens = tokenize(sanitizedSQL);
+
+            }catch{
+                expect(null).toEqual(expected);
+                return;
+            }
 
             const astwithVariables = parse(tokens, variables);
             variables = astwithVariables.variables;
