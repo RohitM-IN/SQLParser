@@ -11,6 +11,15 @@ function convertToDevExpressFormat(ast, variables, resultObject = null, parentOp
     if (ast.type === "logical") {
         // Handle logical operators (AND, OR)
         const operator = ast.operator.toLowerCase();
+
+        // Handle special case for ISNULL function to replace value with null in comparison
+        if (ast.left?.type === "function" && ast.left.name === "ISNULL" && ast.right?.type === "value") {
+            return [convertToDevExpressFormat(ast.left, variables, resultObject), operator, null];
+        }
+        if (ast.right?.type === "function" && ast.right.name === "ISNULL" && ast.left?.type === "value") {
+            return [null, operator, convertToDevExpressFormat(ast.right, variables, resultObject)];
+        }
+
         const left = convertToDevExpressFormat(ast.left, variables, resultObject,operator);
         const right = convertToDevExpressFormat(ast.right, variables, resultObject,operator);
 
