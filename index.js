@@ -2,8 +2,9 @@ import { tokenize } from "./tokenizer.js";
 import { parse } from "./parser.js";
 import { sanitizeQuery } from "./sanitizer.js";
 import { convertToDevExpressFormat } from "./converter.js";
+import { sampleResultObject } from "./sample.js";
 
-export function parseFilterString(sql) {
+export function parseFilterString(sql, resultObject = null) {
     if (sql.toUpperCase().startsWith("SELECT")) return null; // Skip full SQL queries
     let { sanitizedSQL, variables } = sanitizeQuery(sql);
     console.log("Sanitized SQL:", sanitizedSQL, "\n");
@@ -16,10 +17,10 @@ export function parseFilterString(sql) {
     
     const ast = astwithVariables.ast;
     console.log("AST:", JSON.stringify(ast, null, 2), "\n");
-    return convertToDevExpressFormat(ast, variables);
+    return convertToDevExpressFormat(ast, variables, resultObject);
 }
 
 
-var devexpress = parseFilterString("((ISNULL({0}, 0) = 0 AND CompanyID = {1}) OR CompanyID IS NULL) OR BranchID = {0}");
+var devexpress = parseFilterString("ID IN ({WorkOrderLine.ApplicableUoms}) AND (CompanyID = {WorkOrderDocument.CompanyID})",sampleResultObject);
 
 console.log("devexpress:", JSON.stringify(devexpress, null, 2));

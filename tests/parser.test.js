@@ -3,31 +3,32 @@ import {parse} from "../parser";
 import { sanitizeQuery } from "../sanitizer";
 import { tokenize } from "../tokenizer";
 import { convertToDevExpressFormat } from "../converter";
+import { sampleResultObject } from "../sample";
 
 describe("Parser SQL to dx Filter Builder", () => {
     const testCases = [
         {
             input: "(ID = {CoreEntity0022.CompanyGroupID} OR ISNULL({CoreEntity0022.CompanyGroupID},0) = 0)",
             expected: [
-                ["ID", "=", "{CoreEntity0022.CompanyGroupID}"],
+                ["ID", "=", 42],
                 "or",
-                ["{CoreEntity0022.CompanyGroupID}", "=", 0], // TODO: This should be ["{CoreEntity0022.CompanyGroupID}", "=", null]
+                [42, "=", 0], // TODO: This should be ["{CoreEntity0022.CompanyGroupID}", "=", null]
             ],
         },
         {
             input: "GroupNo = {Employee.District} OR ISNULL(GroupNo,0) = 0 OR {Employee.District} = 0",
             expected: [
-                ["GroupNo", "=", "{Employee.District}"],
+                ["GroupNo", "=", 0],
                 "or",
                 [["GroupNo", "=", 0], // TODO: This should be ["GroupNo", "=", null]
                 "or",
-                ["{Employee.District}", "=", 0]],
+                [0, "=", 0]],
             ],
         },
         {
             input: "ContactID = {SaleInvoiceDocument.ContactID} AND AddressType IN (2, 4)",
             expected: [
-                ["ContactID", "=", "{SaleInvoiceDocument.ContactID}"],
+                ["ContactID", "=", 42],
                 "and",
                 ["AddressType", "in", [2, 4]],
             ],
@@ -35,33 +36,33 @@ describe("Parser SQL to dx Filter Builder", () => {
         {
             input: "ID IN ({WorkOrderLine.ApplicableUoms}) AND (CompanyID = {WorkOrderDocument.CompanyID} OR {WorkOrderDocument.CompanyID} = 0)",
             expected: [
-                ["ID", "in", ["{WorkOrderLine.ApplicableUoms}"]],
+                ["ID", "in", ["UOM1", "UOM2", "UOM3"]],
                 "and",
                 [
-                    ["CompanyID", "=", "{WorkOrderDocument.CompanyID}"],
+                    ["CompanyID", "=", 2],
                     "or",
-                    ["{WorkOrderDocument.CompanyID}", "=", 0],
+                    [2, "=", 0],
                 ],
             ],
         },
         {
             input: "CompanyID = {AccountingRule.CompanyID}",
             expected: [
-                "CompanyID", "=", "{AccountingRule.CompanyID}",
+                "CompanyID", "=", 42,
             ],
         },
         {
             input: "(Level > {Area.AreaType})",
             expected: [
-                "Level",">","{Area.AreaType}"
+                "Level",">",42
             ]
         },
         {
             input: "(ID <> {Item.ID}) AND (ItemGroupType IN ({Item.AllowedItemGroupType}))",
             expected: [
-                ["ID","<>","{Item.ID}"],
+                ["ID","<>",42],
                 'and',
-                ["ItemGroupType","in",["{Item.AllowedItemGroupType}"]]
+                ["ItemGroupType","in",[1,2]]
             ]
         },
         {
@@ -69,24 +70,24 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 [
                     [
-                        ["FromDate","<=","{TransferOutwardDocument.DocDate}"],
+                        ["FromDate","<=","2022-01-01"],
                         'and',
-                        ["ToDate",">=","{TransferOutwardDocument.DocDate}"]
+                        ["ToDate",">=","2022-01-01"]
                     ],
                     'or',
                     ["ToDate","=",null]
                 ],
                 "and",
                 [
-                    ["BranchID","=","{TransferOutwardDocument.DocDate}"],
+                    ["BranchID","=",42],
                     "or",
                     ["RefBranchID","=",null]
                 ],
                 "and",
                 [
-                    ["CompanyID","=","{TransferOutwardDocument.RefBranchID}"],
+                    ["CompanyID","=",7],
                     "or",
-                    ["{TransferOutwardDocument.RefBranchID}","=",0],
+                    [7,"=",0],
                     "or",
                     ["CompanyID","=",null]
                 ]
@@ -95,7 +96,7 @@ describe("Parser SQL to dx Filter Builder", () => {
         {
             input: "(ID <> {Item.ID}) AND ( ItemGroupType = '''')",
             expected: [
-                ["ID","<>","{Item.ID}"],
+                ["ID","<>",42],
                 'and',
                 ["ItemGroupType","=",""]
             ]
@@ -105,19 +106,19 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: null
         },
         {
-            input: "((ISNULL({0}, 0) = 0 AND CompanyID = {1}) OR CompanyID IS NULL) OR BranchID = {0}",
+            input: "((ISNULL({0}, 0) = 0 AND CompanyID = {1}) OR CompanyID IS NULL) OR BranchID = {0} | [LeadDocument.BranchID] | [LeadDocument.CompanyID]",
             expected: [
                 [
                     [
-                        ["{0}","=",null],
+                        [42,"=",null],
                         "and",
-                        ["CompanyID", "=", "{1}"]
+                        ["CompanyID", "=", 7]
                     ],
                     "or",
                     ["CompanyID","=", null]
                 ],
                 'or',
-                [ "BranchID", "=",  "{0}" ]
+                [ "BranchID", "=",  42 ]
             ]
         },
         // {
@@ -147,7 +148,7 @@ describe("Parser SQL to dx Filter Builder", () => {
             variables = astwithVariables.variables;
             const ast = astwithVariables.ast;
 
-            const result = convertToDevExpressFormat(ast, variables);
+            const result = convertToDevExpressFormat(ast, variables,sampleResultObject);
 
             expect(result).toEqual(expected);
         });
