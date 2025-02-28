@@ -1,6 +1,6 @@
 import { parse } from "./parser.js";
 import { sanitizeQuery } from "./sanitizer.js";
-import { convertToDevExpressFormat } from "./converter.js";
+import { convertToDevExpressFormat, isAlwaysTrue } from "./converter.js";
 import { sampleResultObject } from "./sample.js";
 
 export function parseFilterString(filterString, sampleData = null) {
@@ -16,10 +16,14 @@ export function parseFilterString(filterString, sampleData = null) {
     const astTree = parsedResult.ast;
     console.log("AST Tree:", JSON.stringify(astTree, null, 2), "\n");
 
-    return convertToDevExpressFormat(astTree, extractedVariables, sampleData);
+    const devExpressFilter = convertToDevExpressFormat(astTree, extractedVariables, sampleData);
+
+    if(isAlwaysTrue(devExpressFilter)) return [];
+
+    return devExpressFilter;
 }
 
 // Example usage
-const devExpressFilter = parseFilterString("(ID <> {Item.ID}) AND (ItemGroupType IN ({Item.AllowedItemGroupType}))", sampleResultObject);
+const devExpressFilter = parseFilterString("GroupNo = {Employee.District} OR ISNULL(GroupNo,0) = 0 OR {Employee.District} = 0", sampleResultObject);
 
 console.log("DevExpress Filter:", JSON.stringify(devExpressFilter, null, 2));
