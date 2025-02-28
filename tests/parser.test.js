@@ -124,6 +124,12 @@ describe("Parser SQL to dx Filter Builder", () => {
         {
             input: "SELECT DISTINCT OP.DocID ID,OP.DocName,OP.DocType,OP.DocName [Work Purchase Order],OP.DocDate DocDate,SP.WoStatus,OP.DocDate [Work Purchase Order Date], OP.CompanyID,      cast(cast(OP.DocDate as date) as varchar(10)) DocumentDate        FROM OpenDocuments OP      inner join PurchaseHeader PH on PH.Id=op.DocID       inner JOIN PurchasePosting PP ON PP.DocID = PH.ID       inner JOIN SalePosting SP ON SP.PurchasePostingLineID = PP.ID",
             expect: null
+        },
+        {
+            input: "FromDate Between '10-10-2021' AND '10-10-2022'",
+            expected:[
+                "FromDate","between",[ "10-10-2021", "10-10-2022"]
+            ]
         }
     ];
 
@@ -141,17 +147,14 @@ describe("Parser SQL to dx Filter Builder", () => {
             }
 
             let { sanitizedSQL, variables } = sanitizeQuery(input);
-            let tokens = null;
 
-            try{
-                tokens = tokenize(sanitizedSQL);
+            const astwithVariables = parse(sanitizedSQL, variables);
 
-            }catch{
+            if(astwithVariables == null){
                 expect(null).toEqual(expected);
                 return;
             }
 
-            const astwithVariables = parse(tokens, variables);
             variables = astwithVariables.variables;
             const ast = astwithVariables.ast;
 

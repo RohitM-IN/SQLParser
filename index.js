@@ -1,4 +1,3 @@
-import { tokenize } from "./tokenizer.js";
 import { parse } from "./parser.js";
 import { sanitizeQuery } from "./sanitizer.js";
 import { convertToDevExpressFormat } from "./converter.js";
@@ -8,10 +7,10 @@ export function parseFilterString(sql, resultObject = null) {
     if (sql.toUpperCase().startsWith("SELECT")) return null; // Skip full SQL queries
     let { sanitizedSQL, variables } = sanitizeQuery(sql);
     console.log("Sanitized SQL:", sanitizedSQL, "\n");
-    const tokens = tokenize(sanitizedSQL);
-    console.log("Tokens:", JSON.stringify(tokens, null, 2), "\n");
+    // const tokens = tokenize(sanitizedSQL);
+    // console.log("Tokens:", JSON.stringify(tokens, null, 2), "\n");
     
-    const astwithVariables = parse(tokens, variables);
+    const astwithVariables = parse(sanitizedSQL, variables);
     variables = astwithVariables.variables;
     console.log("Variables:", JSON.stringify(variables, null, 2), "\n");
     
@@ -21,6 +20,6 @@ export function parseFilterString(sql, resultObject = null) {
 }
 
 
-var devexpress = parseFilterString("CompanyID = {TransferOutwardDocument.CompanyID}  OR {TransferOutwardDocument.CompanyID} = 0 OR CompanyID is NULL",sampleResultObject);
+var devexpress = parseFilterString("FromDate Between '10-10-2021' AND '10-10-2022'",sampleResultObject);
 
 console.log("devexpress:", JSON.stringify(devexpress, null, 2));
