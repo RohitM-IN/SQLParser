@@ -20,6 +20,6 @@ export function parseFilterString(filterString, sampleData = null) {
 }
 
 // Example usage
-const devExpressFilter = parseFilterString("FromDate BETWEEN '10-10-2021' AND '10-10-2022'", sampleResultObject);
+const devExpressFilter = parseFilterString("(ID <> {Item.ID}) AND (ItemGroupType IN ({Item.AllowedItemGroupType}))", sampleResultObject);
 
 console.log("DevExpress Filter:", JSON.stringify(devExpressFilter, null, 2));

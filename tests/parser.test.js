@@ -62,7 +62,7 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 ["ID","<>",42],
                 'and',
-                ["ItemGroupType","in",[1,2]]
+                ["ItemGroupType","in",["1","2"]]
             ]
         },
         {

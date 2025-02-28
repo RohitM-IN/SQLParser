@@ -1,212 +1,186 @@
 /**
- * Converts an AST to DevExpress filter format with ResultObject support
- * @param {Object} ast - The abstract syntax tree
- * @param {Array} variables - Array of variable names
- * @param {Object} resultObject - Optional ResultObject for placeholder resolution
- * @returns {Array} DevExpress format filter
+ * Converts an AST to DevExpress filter format.
+ * @param {Object} ast - The abstract syntax tree.
+ * @param {Array} variables - Array of variable names.
+ * @param {Object} resultObject - Optional object for placeholder resolution.
+ * @param {string} parentOperator - The operator of the parent logical node (if any).
+ * @returns {Array|null} DevExpress format filter.
  */
 function convertToDevExpressFormat(ast, variables, resultObject = null, parentOperator = null) {
     if (!ast) return null;
 
-    if (ast.type === "logical") {
-        // Handle logical operators (AND, OR)
-        const operator = ast.operator.toLowerCase();
-
-        // Handle special case for ISNULL function to replace value with null in comparison
-        if (ast.left?.type === "function" && ast.left.name === "ISNULL" && ast.right?.type === "value") {
-            return [convertToDevExpressFormat(ast.left, variables, resultObject), operator, null];
-        }
-        if (ast.right?.type === "function" && ast.right.name === "ISNULL" && ast.left?.type === "value") {
-            return [null, operator, convertToDevExpressFormat(ast.right, variables, resultObject)];
-        }
-
-        const left = convertToDevExpressFormat(ast.left, variables, resultObject,operator);
-        const right = convertToDevExpressFormat(ast.right, variables, resultObject,operator);
-
-        if (parentOperator !== null && operator === parentOperator || ast.operator === ast.right?.operator) {
-            let parts = [];
-            if (Array.isArray(left) && left[1] === operator) {
-                parts = parts.concat(left);
-            } else {
-                parts.push(left);
-            }
-            parts.push(operator);
-            if (Array.isArray(right) && right[1] === operator) {
-                parts = parts.concat(right);
-            } else {
-                parts.push(right);
-            }
-            return parts;
-        }
-
-        return [
-            left,
-            operator,
-            right
-        ];
-    } else if (ast.type === "comparison") {
-        // Handle special case for IS NULL
-        if (ast.operator.toUpperCase() === "IS" && ast.value === null) {
-            return [ast.field, "=", null];
-        }
-        
-        // Handle IN operator
-        if (ast.operator.toUpperCase() === "IN") {
-            let resolvedValue = convertValue(ast.value, variables, resultObject);
-            if (resolvedValue.length === 1){
-                resolvedValue = resolvedValue[0];
-            }
-            return [ast.field, "in", resolvedValue];
-        }
-
-        if(ast.field?.type === 'placeholder'){
-            return [convertValue(ast.field, variables, resultObject), ast.operator.toLowerCase(), convertValue(ast.value, variables, resultObject)];
-        }
-        
-        // Handle other comparison operators
-        return [ast.field, ast.operator.toLowerCase(), convertValue(ast.value, variables, resultObject)];
-    } else if (ast.type === "function") {
-        // Special handling for ISNULL function in a comparison
-        if (ast.name === "ISNULL" && ast.args && ast.args.length >= 2) {
-            const firstArg = ast.args[0];
-            const secondArg = ast.args[1];
-            
-            // If first arg is a placeholder, resolve it
-            if (firstArg && firstArg.type === "placeholder") {
-                const resolvedValue = resolvePlaceholderFromResultObject(firstArg.value, resultObject);
-                // If value can be resolved, return it, otherwise return null (not second arg)
-                if (resolvedValue !== `{${firstArg.value}}`) {
-                    return resolvedValue;
-                }
-                return null;
-            }
-            
-            // Return the first arg directly
-            return convertValue(firstArg, variables, resultObject);
-        }
-        
-        // Generic function handling
-        return [ast.name.toLowerCase(), convertValues(ast.args, variables, resultObject)];
-    } else if (ast.type === "field") {
-        return convertValue(ast.value, variables, resultObject);
-    } else if (ast.type === "value") {
-        return convertValue(ast.value, variables, resultObject);
+    switch (ast.type) {
+        case "logical":
+            return handleLogicalOperator(ast, variables, resultObject, parentOperator);
+        case "comparison":
+            return handleComparisonOperator(ast, variables, resultObject);
+        case "function":
+            return handleFunction(ast, variables, resultObject);
+        case "field":
+        case "value":
+            return convertValue(ast.value, variables, resultObject);
+        default:
+            return null;
     }
-    
-    return null;
 }
 
 /**
- * Convert an array of values
+ * Handles logical operators (AND, OR).
+ */
+function handleLogicalOperator(ast, variables, resultObject, parentOperator) {
+    const operator = ast.operator.toLowerCase();
+
+    // Special case: Handle ISNULL comparison with a value
+    if (isNullCheck(ast.left, ast.right)) {
+        return [convertToDevExpressFormat(ast.left, variables, resultObject), operator, null];
+    }
+    if (isNullCheck(ast.right, ast.left)) {
+        return [null, operator, convertToDevExpressFormat(ast.right, variables, resultObject)];
+    }
+
+    // Recursively process left and right operands
+    const left = convertToDevExpressFormat(ast.left, variables, resultObject, operator);
+    const right = convertToDevExpressFormat(ast.right, variables, resultObject, operator);
+
+    // Flatten logical expressions if needed
+    if (shouldFlattenLogicalTree(parentOperator, operator, ast)) {
+        return flattenLogicalTree(left, operator, right);
+    }
+    return [left, operator, right];
+}
+
+/**
+ * Handles comparison operators (e.g., =, <>, IN, IS).
+ */
+function handleComparisonOperator(ast, variables, resultObject) {
+    const operator = ast.operator.toUpperCase();
+
+    // Handle "IS NULL" condition
+    if (operator === "IS" && ast.value === null) {
+        return [ast.field, "=", null];
+    }
+
+    // Handle "IN" condition, including comma-separated values
+    if (operator === "IN") {
+        let resolvedValue = convertValue(ast.value, variables, resultObject);
+
+        if (Array.isArray(resolvedValue) && resolvedValue.length === 1) {
+            const firstValue = resolvedValue[0];
+
+            // Convert single string with commas into an array
+            resolvedValue = firstValue.includes(',')
+                ? firstValue.split(',').map(v => v.trim()) 
+                : firstValue;
+        }
+        
+        return [ast.field, "in", resolvedValue];
+    }
+
+    // Default case: standard comparison
+    return [
+        convertValue(ast.field, variables, resultObject),
+        ast.operator.toLowerCase(),
+        convertValue(ast.value, variables, resultObject),
+    ];
+}
+
+/**
+ * Handles function calls, including ISNULL.
+ */
+function handleFunction(ast, variables, resultObject) {
+    if (ast.name === "ISNULL" && ast.args && ast.args.length >= 2) {
+        const firstArg = ast.args[0];
+
+        // Resolve placeholders if applicable
+        if (firstArg.type === "placeholder") {
+            const resolvedValue = resolvePlaceholderFromResultObject(firstArg.value, resultObject);
+            return resolvedValue !== `{${firstArg.value}}` ? resolvedValue : null;
+        }
+
+        return convertValue(firstArg, variables, resultObject);
+    }
+
+    // Generic function handling
+    return [ast.name.toLowerCase(), convertValues(ast.args, variables, resultObject)];
+}
+
+/**
+ * Converts an array of values.
  */
 function convertValues(values, variables, resultObject) {
-    if (!values) return [];
-    return values.map(val => convertValue(val, variables, resultObject));
+    return values ? values.map(val => convertValue(val, variables, resultObject)) : [];
 }
 
 /**
- * Convert a single value with ResultObject support
+ * Converts a single value, resolving placeholders and handling ISNULL.
  */
 function convertValue(val, variables, resultObject) {
     if (val === null) return null;
     
-    // Handle arrays (for IN operator)
+    // Handle array values
     if (Array.isArray(val)) {
         return val.map(item => convertValue(item, variables, resultObject));
     }
-    
-    // Handle placeholder objects
+
+    // Handle object-based values
     if (typeof val === "object") {
-        // Check if it's a placeholder object
-        if (val && val.type === "placeholder") {
-            // If resultObject provided, attempt to resolve the placeholder value
-            if (resultObject && typeof val.value === 'string') {
-                const resolved = resolvePlaceholderFromResultObject(val.value, resultObject);
-                return resolved;
-            }
-            return `{${val.value}}`;
+        if (val.type === "placeholder") {
+            return resolvePlaceholderFromResultObject(val.value, resultObject);
         }
-        
+
         // Special handling for ISNULL function
-        if (val.type === "function" && val.name === "ISNULL" && val.args && val.args.length >= 2) {
-            const firstArg = val.args[0];
-            
-            // If first arg is a placeholder, resolve it
-            if (firstArg && firstArg.type === "placeholder") {
-                const resolvedValue = resolvePlaceholderFromResultObject(firstArg.value, resultObject);
-                // If value can be resolved, return it, otherwise return null (not second arg)
-                if (resolvedValue !== `{${firstArg.value}}`) {
-                    return resolvedValue;
-                }
-                return null;
-            }
-            
-            // Return the first arg directly
-            return convertValue(firstArg, variables, resultObject);
+        if (val.type === "function" && val.name === "ISNULL" && val.args?.length >= 2) {
+            return convertValue(val.args[0], variables, resultObject);
         }
-        
+
         // Handle nested AST nodes
         if (val.type) {
             return convertToDevExpressFormat(val, variables, resultObject);
         }
     }
-    
-    // Return primitive values as-is
+
     return val;
 }
 
 /**
- * Resolves a placeholder value from the ResultObject
- * Format: {EntityName.AttributeName}
+ * Resolves a placeholder value from the result object.
  */
 function resolvePlaceholderFromResultObject(placeholder, resultObject) {
     if (!resultObject) return `{${placeholder}}`;
-    
+
     try {
-        // Parse the placeholder to get entity name and attribute
         const [entityName, attributeName] = placeholder.split('.');
+        const entityData = resultObject[entityName]?.Data?.[0]?.value;
         
-        // Check if the entity exists in the ResultObject
-        if (resultObject[entityName]) {
-            const entityData = resultObject[entityName];
-            
-            // If we have data for this entity
-            if (entityData.Data && entityData.Data.length > 0) {
-                // Get the first data item
-                const dataItem = entityData.Data[0];
-                
-                // Check if the attribute exists in the data item's value
-                if (attributeName && dataItem.value && dataItem.value.hasOwnProperty(attributeName)) {
-                    const value = dataItem.value[attributeName];
-                    
-                    // Special handling for comma-separated strings that should be arrays of numbers
-                    if (attributeName === "AllowedItemGroupType" && typeof value === "string" && value.includes(",")) {
-                        return value.split(",").map(v => parseInt(v.trim(), 10));
-                    }
-                    
-                    // Handle special case for string values that should be without quotes
-                    // For placeholders inside quoted strings like '{TransferOutwardDocument.DocDate}'
-                    if (placeholder.includes('TransferOutwardDocument.DocDate')) {
-                        return value;
-                    }
-                    
-                    return value;
-                } else {
-                    // If attribute not found, return first property as fallback
-                    const firstKey = Object.keys(dataItem.value)[0];
-                    if (firstKey) {
-                        return dataItem.value[firstKey];
-                    }
-                }
-            }
-        }
-        
-        // If we can't resolve, return the original placeholder
-        return `{${placeholder}}`;
+        return entityData?.[attributeName] ?? Object.values(entityData ?? {})[0] ?? `{${placeholder}}`;
     } catch (error) {
         console.error(`Error resolving placeholder ${placeholder}:`, error);
         return `{${placeholder}}`;
     }
+}
+
+/**
+ * Checks if a node represents an ISNULL function used in a comparison.
+ */
+function isNullCheck(node, valueNode) {
+    return node?.type === "function" && node.name === "ISNULL" && valueNode?.type === "value";
+}
+
+/**
+ * Determines if a logical tree should be flattened.
+ */
+function shouldFlattenLogicalTree(parentOperator, operator, ast) {
+    return parentOperator !== null && operator === parentOperator || ast.operator === ast.right?.operator;
+}
+
+/**
+ * Flattens nested logical trees for a cleaner DevExpress format.
+ */
+function flattenLogicalTree(left, operator, right) {
+    let parts = Array.isArray(left) && left[1] === operator ? left : [left];
+    parts.push(operator);
+    parts = parts.concat(Array.isArray(right) && right[1] === operator ? right : [right]);
+    return parts;
 }
 
 export { convertToDevExpressFormat };
