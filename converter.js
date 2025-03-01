@@ -1,7 +1,7 @@
 const EnableShortCircuit = true;
 
 /**
- * Converts an AST to DevExpress filter format.
+ * Converts an AST (Abstract Syntax Tree) to DevExpress filter format.
  * @param {Object} ast - The abstract syntax tree.
  * @param {Array} variables - Array of variable names.
  * @param {Object} resultObject - Optional object for placeholder resolution.
@@ -9,7 +9,7 @@ const EnableShortCircuit = true;
  * @returns {Array|null} DevExpress format filter.
  */
 function convertToDevExpressFormat(ast, variables, resultObject = null, parentOperator = null) {
-    if (!ast) return null;
+    if (!ast) return null; // Return null if the AST is empty
 
     switch (ast.type) {
         case "logical":
@@ -27,7 +27,7 @@ function convertToDevExpressFormat(ast, variables, resultObject = null, parentOp
 }
 
 /**
- * Handles logical operators (AND, OR).
+ * Handles logical operators (AND, OR) and applies short-circuit optimizations.
  */
 function handleLogicalOperator(ast, variables, resultObject, parentOperator) {
     const operator = ast.operator.toLowerCase();
@@ -36,7 +36,8 @@ function handleLogicalOperator(ast, variables, resultObject, parentOperator) {
     if (isNullCheck(ast.left, ast.right)) {
         const resolvedValue = convertValue(ast.right, variables, resultObject);
 
-        if(EnableShortCircuit && ast.left.args[0]?.value?.type === "placeholder") {
+        // Short-circuit: If left argument is a placeholder, return boolean result directly
+        if (EnableShortCircuit && ast.left.args[0]?.value?.type === "placeholder") {
             return resolvedValue == null ? true : false;
         }
 
@@ -50,31 +51,26 @@ function handleLogicalOperator(ast, variables, resultObject, parentOperator) {
     const left = convertToDevExpressFormat(ast.left, variables, resultObject, operator);
     const right = convertToDevExpressFormat(ast.right, variables, resultObject, operator);
 
-    if(EnableShortCircuit && (left === true || right === true)) {
-        if(operator === 'or') return true;
+    // Short-circuit: Optimize for always-true conditions
+    if (EnableShortCircuit && (left === true || right === true)) {
+        if (operator === 'or') return true;
         return left === true ? right : left;
     }
 
-    // behave same for 'or' and 'and'
-    if(EnableShortCircuit && (left === false || right === false)) {
+    // Short-circuit: Optimize for always-false conditions
+    if (EnableShortCircuit && (left === false || right === false)) {
         return left === false ? right : left;
     }
 
-    // Flatten logical expressions if needed
+    // Flatten nested logical expressions if applicable
     if (shouldFlattenLogicalTree(parentOperator, operator, ast)) {
-
-        if(EnableShortCircuit && (left === true || right === true)) {
-            if(operator === 'or') return true;
-            return left === true ? right : left;
-        }
-
         return flattenLogicalTree(left, operator, right);
     }
     return [left, operator, right];
 }
 
 /**
- * Handles comparison operators (e.g., =, <>, IN, IS).
+ * Handles comparison operators (=, <>, IN, IS) and applies optimizations.
  */
 function handleComparisonOperator(ast, variables, resultObject) {
     const operator = ast.operator.toUpperCase();
@@ -88,34 +84,24 @@ function handleComparisonOperator(ast, variables, resultObject) {
     if (operator === "IN") {
         let resolvedValue = convertValue(ast.value, variables, resultObject);
 
+        // Convert single-string CSV into an array
         if (Array.isArray(resolvedValue) && resolvedValue.length === 1) {
             const firstValue = resolvedValue[0];
-
-            // Convert single string with commas into an array
             resolvedValue = firstValue.includes(',')
-                ? firstValue.split(',').map(v => v.trim()) 
+                ? firstValue.split(',').map(v => v.trim())
                 : firstValue;
         }
-        
         return [ast.field, "in", resolvedValue];
     }
 
     const left = convertValue(ast.field, variables, resultObject);
     const right = convertValue(ast.value, variables, resultObject);
 
-    if(EnableShortCircuit && isAlwaysTrue([left, operator, right])) {
-        return true;
-    }
-    if(EnableShortCircuit && isAlwaysFalse([left, operator, right])) {
-        return false;
-    }
+    // Short-circuit evaluation
+    if (EnableShortCircuit && isAlwaysTrue([left, operator, right])) return true;
+    if (EnableShortCircuit && isAlwaysFalse([left, operator, right])) return false;
 
-    // Default case: standard comparison
-    return [
-        left,
-        ast.operator.toLowerCase(),
-        right,
-    ];
+    return [left, ast.operator.toLowerCase(), right];
 }
 
 /**
@@ -125,17 +111,16 @@ function handleFunction(ast, variables, resultObject) {
     if (ast.name === "ISNULL" && ast.args && ast.args.length >= 2) {
         const firstArg = ast.args[0];
 
-        // Resolve placeholders if applicable
+        // Resolve placeholders
         if (firstArg.type === "placeholder") {
             const resolvedValue = resolvePlaceholderFromResultObject(firstArg.value, resultObject);
             return resolvedValue !== `{${firstArg.value}}` ? resolvedValue : null;
         }
-
         return convertValue(firstArg, variables, resultObject);
     }
 
-    // Generic function handling
-    return [ast.name.toLowerCase(), convertValues(ast.args, variables, resultObject)];
+    // this should never happen as we are only handling ISNULL and should throw an error
+    throw new Error(`Unsupported function: ${ast.name}`);
 }
 
 /**
@@ -177,15 +162,13 @@ function convertValue(val, variables, resultObject) {
 }
 
 /**
- * Resolves a placeholder value from the result object.
+ * Resolves placeholder values from the result object.
  */
 function resolvePlaceholderFromResultObject(placeholder, resultObject) {
     if (!resultObject) return `{${placeholder}}`;
-
     try {
         const [entityName, attributeName] = placeholder.split('.');
         const entityData = resultObject[entityName]?.Data?.[0]?.value;
-        
         return entityData?.[attributeName] ?? Object.values(entityData ?? {})[0] ?? `{${placeholder}}`;
     } catch (error) {
         console.error(`Error resolving placeholder ${placeholder}:`, error);
@@ -194,22 +177,16 @@ function resolvePlaceholderFromResultObject(placeholder, resultObject) {
 }
 
 /**
- * Checks if a node represents an ISNULL function used in a comparison.
+ * Utility functions for null checking and tree flattening.
  */
 function isNullCheck(node, valueNode) {
     return node?.type === "function" && node.name === "ISNULL" && valueNode?.type === "value";
 }
 
-/**
- * Determines if a logical tree should be flattened.
- */
 function shouldFlattenLogicalTree(parentOperator, operator, ast) {
     return parentOperator !== null && operator === parentOperator || ast.operator === ast.right?.operator;
 }
 
-/**
- * Flattens nested logical trees for a cleaner DevExpress format.
- */
 function flattenLogicalTree(left, operator, right) {
     let parts = Array.isArray(left) && left[1] === operator ? left : [left];
     parts.push(operator);
@@ -217,40 +194,27 @@ function flattenLogicalTree(left, operator, right) {
     return parts;
 }
 
-// Detects 1 = 1 (Always True)
+/**
+ * Utility functions to detect always-true or always-false expressions.
+ */
 function isAlwaysTrue(condition) {
     return Array.isArray(condition) && condition.length === 3 && evaluateExpression(condition[0], condition[1], condition[2]) == true;
 }
 
-// Detects 1 = 0 (Always False)
 function isAlwaysFalse(condition) {
     return Array.isArray(condition) && condition.length === 3 && evaluateExpression(condition[0], condition[1], condition[2]) == false;
 }
 
 function evaluateExpression(left, operator, right) {
-
-    if(isNaN(left) || isNaN(right) || left === null || right === null) {
-        return null;
-    }
-
+    if (isNaN(left) || isNaN(right) || left === null || right === null) return null;
     switch (operator.toLowerCase()) {
-        case '=':
-        case '==':
-            return left === right;
-        case '<>':
-        case '!=':
-            return left !== right;
-        case '>':
-            return left > right;
-        case '>=':
-            return left >= right;
-        case '<':
-            return left < right;
-        case '<=':
-            return left <= right;
-        default:
-            // For unsupported operators, default to false
-            return false;
+        case '=': case '==': return left === right;
+        case '<>': case '!=': return left !== right;
+        case '>': return left > right;
+        case '>=': return left >= right;
+        case '<': return left < right;
+        case '<=': return left <= right;
+        default: return false;
     }
 }
 
