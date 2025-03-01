@@ -20,6 +20,6 @@ export function parseFilterString(filterString, sampleData = null) {
 }
 
 // Example usage
-const devExpressFilter = parseFilterString("(ID <> {Item.ID}) AND (ItemGroupType IN ({Item.AllowedItemGroupType}))", sampleResultObject);
+const devExpressFilter = parseFilterString("ID IN ({WorkOrderLine.ApplicableUoms}) AND (CompanyID = {WorkOrderDocument.CompanyID} OR {WorkOrderDocument.CompanyID} = 0)", sampleResultObject);
 
 console.log("DevExpress Filter:", JSON.stringify(devExpressFilter, null, 2));
