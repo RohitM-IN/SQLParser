@@ -1,3 +1,5 @@
+const EnableShortCircuit = true;
+
 /**
  * Converts an AST to DevExpress filter format.
  * @param {Object} ast - The abstract syntax tree.
@@ -32,6 +34,12 @@ function handleLogicalOperator(ast, variables, resultObject, parentOperator) {
 
     // Special case: Handle ISNULL comparison with a value
     if (isNullCheck(ast.left, ast.right)) {
+        const resolvedValue = convertValue(ast.right, variables, resultObject);
+
+        if(EnableShortCircuit && ast.left.args[0]?.value?.type === "placeholder") {
+            return resolvedValue == null ? true : false;
+        }
+
         return [convertToDevExpressFormat(ast.left, variables, resultObject), operator, null];
     }
     if (isNullCheck(ast.right, ast.left)) {
@@ -42,8 +50,24 @@ function handleLogicalOperator(ast, variables, resultObject, parentOperator) {
     const left = convertToDevExpressFormat(ast.left, variables, resultObject, operator);
     const right = convertToDevExpressFormat(ast.right, variables, resultObject, operator);
 
+    if(EnableShortCircuit && (left === true || right === true)) {
+        if(operator === 'or') return true;
+        return left === true ? right : left;
+    }
+
+    // behave same for 'or' and 'and'
+    if(EnableShortCircuit && (left === false || right === false)) {
+        return left === false ? right : left;
+    }
+
     // Flatten logical expressions if needed
     if (shouldFlattenLogicalTree(parentOperator, operator, ast)) {
+
+        if(EnableShortCircuit && (left === true || right === true)) {
+            if(operator === 'or') return true;
+            return left === true ? right : left;
+        }
+
         return flattenLogicalTree(left, operator, right);
     }
     return [left, operator, right];
@@ -76,11 +100,21 @@ function handleComparisonOperator(ast, variables, resultObject) {
         return [ast.field, "in", resolvedValue];
     }
 
+    const left = convertValue(ast.field, variables, resultObject);
+    const right = convertValue(ast.value, variables, resultObject);
+
+    if(EnableShortCircuit && isAlwaysTrue([left, operator, right])) {
+        return true;
+    }
+    if(EnableShortCircuit && isAlwaysFalse([left, operator, right])) {
+        return false;
+    }
+
     // Default case: standard comparison
     return [
-        convertValue(ast.field, variables, resultObject),
+        left,
         ast.operator.toLowerCase(),
-        convertValue(ast.value, variables, resultObject),
+        right,
     ];
 }
 
@@ -181,6 +215,43 @@ function flattenLogicalTree(left, operator, right) {
     parts.push(operator);
     parts = parts.concat(Array.isArray(right) && right[1] === operator ? right : [right]);
     return parts;
+}
+
+// Detects 1 = 1 (Always True)
+function isAlwaysTrue(condition) {
+    return Array.isArray(condition) && condition.length === 3 && evaluateExpression(condition[0], condition[1], condition[2]) == true;
+}
+
+// Detects 1 = 0 (Always False)
+function isAlwaysFalse(condition) {
+    return Array.isArray(condition) && condition.length === 3 && evaluateExpression(condition[0], condition[1], condition[2]) == false;
+}
+
+function evaluateExpression(left, operator, right) {
+
+    if(isNaN(left) || isNaN(right) || left === null || right === null) {
+        return null;
+    }
+
+    switch (operator.toLowerCase()) {
+        case '=':
+        case '==':
+            return left === right;
+        case '<>':
+        case '!=':
+            return left !== right;
+        case '>':
+            return left > right;
+        case '>=':
+            return left >= right;
+        case '<':
+            return left < right;
+        case '<=':
+            return left <= right;
+        default:
+            // For unsupported operators, default to false
+            return false;
+    }
 }
 
 export { convertToDevExpressFormat };
