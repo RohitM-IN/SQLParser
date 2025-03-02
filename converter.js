@@ -1,227 +1,393 @@
-const EnableShortCircuit = true;
+const logicalOperators = ['and', 'or'];
 
 /**
- * Converts an AST (Abstract Syntax Tree) to DevExpress filter format.
- * @param {Object} ast - The abstract syntax tree.
- * @param {Array} variables - Array of variable names.
- * @param {Object} resultObject - Optional object for placeholder resolution.
- * @param {string} parentOperator - The operator of the parent logical node (if any).
- * @returns {Array|null} DevExpress format filter.
+ * Main conversion function that sets up the global context
+ * @param {Object} ast - The abstract syntax tree
+ * @param {Array} vars - Array of variable names
+ * @param {Object} results - Optional object for placeholder resolution
+ * @returns {Array|null} DevExpress format filter
  */
-function convertToDevExpressFormat(ast, variables, resultObject = null, parentOperator = null) {
-    if (!ast) return null; // Return null if the AST is empty
+function DevExpressConverter() {
+    // Global variables accessible throughout the converter
+    let resultObject = null;
+    let primaryEntity = null;
+    let primaryKey = null;
+    let variables = [];
+    const EnableShortCircuit = true;
 
-    switch (ast.type) {
-        case "logical":
-            return handleLogicalOperator(ast, variables, resultObject, parentOperator);
-        case "comparison":
-            return handleComparisonOperator(ast, variables, resultObject);
-        case "function":
-            return handleFunction(ast, variables, resultObject);
-        case "field":
-        case "value":
-            return convertValue(ast.value, variables, resultObject);
-        default:
-            return null;
+    /**
+   * Main conversion function that sets up the global context
+   * @param {Object} ast - The abstract syntax tree
+   * @param {Array} vars - Array of variable names
+   * @param {Object} ResultObject - Optional object for placeholder resolution
+   * @param {string} primaryEntity - Optional primary entity name
+   * @param {string} primaryKey - Optional primary key value
+   * @returns {Array|null} DevExpress format filter
+   */
+    function convert(ast, vars, ResultObject = null, PrimaryEntity = null, PrimaryKey = null) {
+        // Set up global context
+        variables = vars;
+        primaryKey = PrimaryKey;
+        primaryEntity = PrimaryEntity;
+        resultObject = resolveVariables(ResultObject);
+
+        // Process the AST
+        return processAstNode(ast);
     }
-}
 
-/**
- * Handles logical operators (AND, OR) and applies short-circuit optimizations.
- */
-function handleLogicalOperator(ast, variables, resultObject, parentOperator) {
-    const operator = ast.operator.toLowerCase();
+    /**
+     * Process an AST node based on its type
+     * @param {Object} ast - The AST node to process
+     * @param {string} parentOperator - The operator of the parent logical node (if any)
+     * @returns {Array|null|boolean} DevExpress format filter or boolean for short-circuit
+     */
+    function processAstNode(ast, parentOperator = null) {
+        if (!ast) return null; // Return null if the AST is empty
 
-    // Special case: Handle ISNULL comparison with a value
-    if (isNullCheck(ast.left, ast.right)) {
-        const resolvedValue = convertValue(ast.right, variables, resultObject);
+        switch (ast.type) {
+            case "logical":
+                return handleLogicalOperator(ast, parentOperator);
+            case "comparison":
+                return handleComparisonOperator(ast);
+            case "function":
+                return handleFunction(ast);
+            case "field":
+            case "value":
+                return convertValue(ast.value);
+            default:
+                return null;
+        }
+    }
 
-        // Short-circuit: If left argument is a placeholder, return boolean result directly
-        if (EnableShortCircuit && ast.left.args[0]?.value?.type === "placeholder") {
-            return resolvedValue == null ? true : false;
+    /**
+     * Handles logical operators (AND, OR) and applies short-circuit optimizations.
+     * @param {Object} ast - The logical operator AST node.
+     * @param {string} parentOperator - The operator of the parent logical node.
+     * @returns {Array|boolean} DevExpress format filter or boolean for short-circuit.
+     */
+    function handleLogicalOperator(ast, parentOperator) {
+        const operator = ast.operator.toLowerCase();
+
+        // Special case: Handle ISNULL comparison with a value
+        if (isNullCheck(ast.left, ast.right)) {
+            const resolvedValue = convertValue(ast.right);
+
+            // Short-circuit: If left argument is a placeholder, return boolean result directly
+            if (EnableShortCircuit && ast.left.args[0]?.value?.type === "placeholder") {
+                return resolvedValue == null;
+            }
+
+            return [processAstNode(ast.left), operator, null];
+        }
+        if (isNullCheck(ast.right, ast.left)) {
+            const resolvedValue = convertValue(ast.left);
+
+            // Short-circuit: If right argument is a placeholder, return boolean result directly
+            if (EnableShortCircuit && ast.right.args[0]?.value?.type === "placeholder") {
+                return resolvedValue == null;
+            }
+
+            return [null, operator, processAstNode(ast.right)];
         }
 
-        return [convertToDevExpressFormat(ast.left, variables, resultObject), operator, null];
-    }
-    if (isNullCheck(ast.right, ast.left)) {
-        return [null, operator, convertToDevExpressFormat(ast.right, variables, resultObject)];
-    }
+        // Recursively process left and right operands
+        const left = processAstNode(ast.left, operator);
+        const right = processAstNode(ast.right, operator);
 
-    // Recursively process left and right operands
-    const left = convertToDevExpressFormat(ast.left, variables, resultObject, operator);
-    const right = convertToDevExpressFormat(ast.right, variables, resultObject, operator);
+        if (EnableShortCircuit) {
+            // Short-circuit: always-true conditions
+            if (left === true || right === true) {
+                if (operator === 'or') return true;
+                return left === true ? right : left;
+            }
 
-    // Short-circuit: Optimize for always-true conditions
-    if (EnableShortCircuit && (left === true || right === true)) {
-        if (operator === 'or') return true;
-        return left === true ? right : left;
-    }
+            // Short-circuit: always-false conditions
+            if (left === false || right === false) {
+                return left === false ? right : left;
+            }
 
-    // Short-circuit: Optimize for always-false conditions
-    if (EnableShortCircuit && (left === false || right === false)) {
-        return left === false ? right : left;
-    }
+        }
 
-    // Detect and flatten nested logical expressions
-    if(parentOperator === null){
-        if(left.length === 3 && ['and', 'or'].includes(left[1])) parentOperator = left[1];
-        if(right.length === 3 && ['and', 'or'].includes(right[1])) parentOperator = right[1];
-    }
+        // Detect and flatten nested logical expressions
+        if (parentOperator === null) {
+            if (left.length === 3 && logicalOperators.includes(left[1])) parentOperator = left[1];
+            if (right.length === 3 && logicalOperators.includes(right[1])) parentOperator = right[1];
+        }
 
-    // Flatten nested logical expressions if applicable
-    if (shouldFlattenLogicalTree(parentOperator, operator, ast)) {
-        return flattenLogicalTree(left, operator, right);
-    }
-    return [left, operator, right];
-}
-
-/**
- * Handles comparison operators (=, <>, IN, IS) and applies optimizations.
- */
-function handleComparisonOperator(ast, variables, resultObject) {
-    const operator = ast.operator.toUpperCase();
-
-    // Handle "IS NULL" condition
-    if (operator === "IS" && ast.value === null) {
-        return [ast.field, "=", null];
+        // Flatten nested logical expressions if applicable
+        if (shouldFlattenLogicalTree(parentOperator, operator, ast)) {
+            return flattenLogicalTree(left, operator, right);
+        }
+        return [left, operator, right];
     }
 
-    // Handle "IN" condition, including comma-separated values
-    if (operator === "IN") {
-        let resolvedValue = convertValue(ast.value, variables, resultObject);
+    /**
+     * Handles comparison operators (=, <>, IN, IS) and applies optimizations.
+     * @param {Object} ast - The comparison operator AST node.
+     * @returns {Array|boolean} DevExpress format filter or boolean for short-circuit.
+     */
+    function handleComparisonOperator(ast) {
+        const operator = ast.operator.toUpperCase();
 
-        // Convert single-string CSV into an array
+        // Handle "IS NULL" condition
+        if (operator === "IS" && ast.value === null) {
+            return [ast.field, "=", null];
+        }
+
+        // Handle "IN" condition, including comma-separated values
+        if (operator === "IN") {
+            return handleInOperator(ast);
+        }
+
+        const left = convertValue(ast.field);
+        const right = convertValue(ast.value);
+        const comparison = [left, ast.operator.toLowerCase(), right];
+
+        // Apply short-circuit evaluation if enabled
+        if (EnableShortCircuit) {
+            if (isAlwaysTrue(comparison)) return true;
+            if (isAlwaysFalse(comparison)) return false;
+        }
+
+        return comparison;
+    }
+
+    /**
+     * Handles function calls, focusing on ISNULL.
+     * @param {Object} ast - The function AST node.
+     * @returns {*} Resolved function result.
+     */
+    function handleFunction(ast) {
+        if (ast.name === "ISNULL" && ast.args && ast.args.length >= 2) {
+            const firstArg = ast.args[0];
+
+            // Resolve placeholders
+            if (firstArg.type === "placeholder") {
+                return resolvePlaceholderFromResultObject(firstArg.value);
+            }
+            return convertValue(firstArg);
+        }
+
+        // this should never happen as we are only handling ISNULL and should throw an error
+        throw new Error(`Unsupported function: ${ast.name}`);
+    }
+
+
+    /**
+     * Handles the IN operator specifically.
+     * @param {Object} ast - The comparison operator AST node.
+     * @returns {Array} DevExpress format filter.
+     */
+    function handleInOperator(ast) {
+        let resolvedValue = convertValue(ast.value);
+
+        // Handle comma-separated values in a string
         if (Array.isArray(resolvedValue) && resolvedValue.length === 1) {
             const firstValue = resolvedValue[0];
-            resolvedValue = firstValue.includes(',')
-                ? firstValue.split(',').map(v => v.trim())
-                : firstValue;
+            if (typeof firstValue === 'string' && firstValue.includes(',')) {
+                resolvedValue = firstValue.split(',').map(v => v.trim());
+            } else {
+                resolvedValue = firstValue;
+            }
         }
+
         return [ast.field, "in", resolvedValue];
     }
 
-    const left = convertValue(ast.field, variables, resultObject);
-    const right = convertValue(ast.value, variables, resultObject);
+    /**
+     * Converts a single value, resolving placeholders and handling special cases.
+     * @param {*} val - The value to convert.
+     * @returns {*} Converted value.
+     */
+    function convertValue(val) {
+        if (val === null) return null;
 
-    // Short-circuit evaluation
-    if (EnableShortCircuit && isAlwaysTrue([left, operator, right])) return true;
-    if (EnableShortCircuit && isAlwaysFalse([left, operator, right])) return false;
-
-    return [left, ast.operator.toLowerCase(), right];
-}
-
-/**
- * Handles function calls, including ISNULL.
- */
-function handleFunction(ast, variables, resultObject) {
-    if (ast.name === "ISNULL" && ast.args && ast.args.length >= 2) {
-        const firstArg = ast.args[0];
-
-        // Resolve placeholders
-        if (firstArg.type === "placeholder") {
-            const resolvedValue = resolvePlaceholderFromResultObject(firstArg.value, resultObject);
-            return resolvedValue !== `{${firstArg.value}}` ? resolvedValue : null;
-        }
-        return convertValue(firstArg, variables, resultObject);
-    }
-
-    // this should never happen as we are only handling ISNULL and should throw an error
-    throw new Error(`Unsupported function: ${ast.name}`);
-}
-
-/**
- * Converts an array of values.
- */
-function convertValues(values, variables, resultObject) {
-    return values ? values.map(val => convertValue(val, variables, resultObject)) : [];
-}
-
-/**
- * Converts a single value, resolving placeholders and handling ISNULL.
- */
-function convertValue(val, variables, resultObject) {
-    if (val === null) return null;
-    
-    // Handle array values
-    if (Array.isArray(val)) {
-        return val.map(item => convertValue(item, variables, resultObject));
-    }
-
-    // Handle object-based values
-    if (typeof val === "object") {
-        if (val.type === "placeholder") {
-            return resolvePlaceholderFromResultObject(val.value, resultObject);
+        // Handle array values
+        if (Array.isArray(val)) {
+            return val.map(item => convertValue(item));
         }
 
-        // Special handling for ISNULL function
-        if (val.type === "function" && val.name === "ISNULL" && val.args?.length >= 2) {
-            return convertValue(val.args[0], variables, resultObject);
+        // Handle object-based values
+        if (typeof val === "object") {
+            if (val.type === "placeholder") {
+                return resolvePlaceholderFromResultObject(val.value);
+            }
+
+            // Special handling for ISNULL function
+            if (val.type === "function" && val.name === "ISNULL" && val.args?.length >= 2) {
+                return convertValue(val.args[0]);
+            }
+
+            // Handle nested AST nodes
+            if (val.type) {
+                return processAstNode(val);
+            }
         }
 
-        // Handle nested AST nodes
-        if (val.type) {
-            return convertToDevExpressFormat(val, variables, resultObject);
+        return val;
+    }
+
+    /**
+     * Resolves placeholder values from the result object.
+     * @param {string} placeholder - The placeholder to resolve.
+     * @returns {*} Resolved placeholder value.
+     */
+    function resolvePlaceholderFromResultObject(placeholder) {
+        if (!resultObject) return `{${placeholder}}`;
+
+
+        return resultObject.hasOwnProperty(placeholder) ? resultObject[placeholder] : `{${placeholder}}`;
+    }
+
+    /**
+     * Checks if a node is an ISNULL function check.
+     * @param {Object} node - The node to check.
+     * @param {Object} valueNode - The value node.
+     * @returns {boolean} True if this is an ISNULL check.
+     */
+    function isNullCheck(node, valueNode) {
+        return node?.type === "function" && node.name === "ISNULL" && valueNode?.type === "value";
+    }
+
+    /**
+     * Determines whether the logical tree should be flattened.
+     * This is based on the parent operator and the current operator.
+     * @param {string} parentOperator - The operator of the parent logical node.
+     * @param {string} operator - The operator of the current logical node.
+     * @param {Object} ast - The current AST node.
+     * @returns {boolean} True if the tree should be flattened, false otherwise.
+     */
+    function shouldFlattenLogicalTree(parentOperator, operator, ast) {
+        return parentOperator !== null && operator === parentOperator || ast.operator === ast.right?.operator;
+    }
+
+    /**
+     * Flattens a logical tree by combining nested logical nodes.
+     * @param {Array} left - The left side of the logical expression.
+     * @param {string} operator - The logical operator.
+     * @param {Array} right - The right side of the logical expression.
+     * @returns {Array} The flattened logical tree.
+     */
+    function flattenLogicalTree(left, operator, right) {
+        const parts = [];
+
+        // Flatten left side if it has the same operator
+        if (Array.isArray(left) && left[1] === operator) {
+            parts.push(...left);
+        } else {
+            parts.push(left);
+        }
+
+        // Add the operator
+        parts.push(operator);
+
+        // Flatten right side if it has the same operator
+        if (Array.isArray(right) && right[1] === operator) {
+            parts.push(...right);
+        } else {
+            parts.push(right);
+        }
+
+        return parts;
+    }
+
+
+    /**
+     * Checks if a condition is always true.
+     * @param {Array} condition - The condition to check.
+     * @returns {boolean} True if the condition is always true.
+     */
+    function isAlwaysTrue(condition) {
+        return Array.isArray(condition) && condition.length === 3 && evaluateExpression(...condition) == true;
+    }
+
+    /**
+     * Checks if a condition is always false.
+     * @param {Array} condition - The condition to check.
+     * @returns {boolean} True if the condition is always false.
+     */
+    function isAlwaysFalse(condition) {
+        return Array.isArray(condition) && condition.length === 3 && evaluateExpression(...condition) == false;
+    }
+
+    /**
+     * Evaluates a simple expression.
+     * @param {*} left - The left operand.
+     * @param {string} operator - The operator.
+     * @param {*} right - The right operand.
+     * @returns {boolean|null} The result of the evaluation or null if not evaluable.
+     */
+    function evaluateExpression(left, operator, right) {
+        if (isNaN(left) || isNaN(right) || left === null || right === null) return null;
+        switch (operator) {
+            case '=': case '==': return left === right;
+            case '<>': case '!=': return left !== right;
+            case '>': return left > right;
+            case '>=': return left >= right;
+            case '<': return left < right;
+            case '<=': return left <= right;
+            default: return false;
         }
     }
 
-    return val;
-}
+    /**
+     * Resolves variables from the result object based on the placeholders.
+     * @param {Object} resultObject - The result object to resolve variables from.
+     * @returns {Object} Resolved variables.
+     */
+    function resolveVariables(resultObject) {
+        const resolvedVariables = {};
 
-/**
- * Resolves placeholder values from the result object.
- */
-function resolvePlaceholderFromResultObject(placeholder, resultObject) {
-    if (!resultObject) return `{${placeholder}}`;
-    try {
-        const [entityName, attributeName] = placeholder.split('.');
-        const entityData = resultObject[entityName]?.Data?.[0]?.value;
-        return entityData?.[attributeName] ?? Object.values(entityData ?? {})[0] ?? `{${placeholder}}`;
-    } catch (error) {
-        console.error(`Error resolving placeholder ${placeholder}:`, error);
-        return `{${placeholder}}`;
+        variables.forEach(placeholder => {
+            const [entityName, attributeName] = placeholder.split('.');
+
+            // Ensure the entity exists in the result object
+            if (!resultObject[entityName]) return;
+
+            const entityData = resultObject[entityName]?.Data;
+            if (!entityData || entityData.length === 0) return;
+
+            let value;
+
+            // If the entity is the primary entity, find the primary key
+            if (entityName === primaryEntity) {
+                const dataIndex = entityData.findIndex(d => d.key === primaryKey);
+                if (dataIndex !== -1) {
+                    value = entityData[dataIndex]?.value[attributeName];
+                } else {
+                    value = null;
+                }
+            }
+
+            // If not the primary entity or primary key not found, get the first data entry
+            if (value === undefined) {
+                value = entityData[0]?.value[attributeName];
+            }
+
+            resolvedVariables[placeholder] = value;
+        });
+
+        return resolvedVariables;
     }
+
+
+
+    return { init: convert };
+
 }
+
+// Create a global instance
+const devExpressConverter = DevExpressConverter();
 
 /**
- * Utility functions for null checking and tree flattening.
+ * Converts an abstract syntax tree to DevExpress format
+ * @param {Object} ast - The abstract syntax tree
+ * @param {Array} variables - Array of variable names
+ * @param {Object} resultObject - Optional object for placeholder resolution
+ * @param {string} primaryEntity - Optional primary entity name
+ * @param {string} primaryKey - Optional primary key value
+ * @returns {Array|null} DevExpress format filter
  */
-function isNullCheck(node, valueNode) {
-    return node?.type === "function" && node.name === "ISNULL" && valueNode?.type === "value";
+export function convertToDevExpressFormat({ ast, variables, resultObject = null, primaryEntity = null, primaryKey = null }) {
+    return devExpressConverter.init(ast, variables, resultObject, primaryEntity, primaryKey);
 }
-
-function shouldFlattenLogicalTree(parentOperator, operator, ast) {
-    return parentOperator !== null && operator === parentOperator || ast.operator === ast.right?.operator;
-}
-
-function flattenLogicalTree(left, operator, right) {
-    let parts = Array.isArray(left) && left[1] === operator ? left : [left];
-    parts.push(operator);
-    parts = parts.concat(Array.isArray(right) && right[1] === operator ? right : [right]);
-    return parts;
-}
-
-/**
- * Utility functions to detect always-true or always-false expressions.
- */
-function isAlwaysTrue(condition) {
-    return Array.isArray(condition) && condition.length === 3 && evaluateExpression(condition[0], condition[1], condition[2]) == true;
-}
-
-function isAlwaysFalse(condition) {
-    return Array.isArray(condition) && condition.length === 3 && evaluateExpression(condition[0], condition[1], condition[2]) == false;
-}
-
-function evaluateExpression(left, operator, right) {
-    if (isNaN(left) || isNaN(right) || left === null || right === null) return null;
-    switch (operator.toLowerCase()) {
-        case '=': case '==': return left === right;
-        case '<>': case '!=': return left !== right;
-        case '>': return left > right;
-        case '>=': return left >= right;
-        case '<': return left < right;
-        case '<=': return left <= right;
-        default: return false;
-    }
-}
-
-export { convertToDevExpressFormat };
