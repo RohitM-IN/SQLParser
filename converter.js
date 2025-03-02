@@ -62,6 +62,12 @@ function handleLogicalOperator(ast, variables, resultObject, parentOperator) {
         return left === false ? right : left;
     }
 
+    // Detect and flatten nested logical expressions
+    if(parentOperator === null){
+        if(left.length === 3 && ['and', 'or'].includes(left[1])) parentOperator = left[1];
+        if(right.length === 3 && ['and', 'or'].includes(right[1])) parentOperator = right[1];
+    }
+
     // Flatten nested logical expressions if applicable
     if (shouldFlattenLogicalTree(parentOperator, operator, ast)) {
         return flattenLogicalTree(left, operator, right);
