@@ -20,6 +20,6 @@ export function parseFilterString(filterString, sampleData = null) {
 }
 
 // Example usage
-const devExpressFilter = parseFilterString("ID IN ({WorkOrderLine.ApplicableUoms}) AND (CompanyID = {WorkOrderDocument.CompanyID} OR {WorkOrderDocument.CompanyID} = 0)", sampleResultObject);
+const devExpressFilter = parseFilterString("((ISNULL({0}, 0) = 0 AND CompanyID = {1}) OR CompanyID IS NULL) OR BranchID = {0} | [LeadDocument.BranchID] | [LeadDocument.CompanyID]", sampleResultObject);
 
 console.log("DevExpress Filter:", JSON.stringify(devExpressFilter, null, 2));
