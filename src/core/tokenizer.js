@@ -6,8 +6,8 @@ const tokenPatterns = {
   number: "\\d+", // Matches numerical values
   placeholder: "'?\\{[^}]+\\}'?", // Matches placeholders like {variable} or '{variable}'
   string: "'(?:''|[^'])*'", // Matches strings, allowing for escaped single quotes ('')
-  operator: "=>|<=|!=|>=|=|<>|>|<|AND|OR|BETWEEN|IN|LIKE|IS", // Matches SQL operators and logical keywords
   identifier: "[\\w.]+", // Matches identifiers, including table.column format
+  operator: "(?<!\w)(=>|<=|!=|>=|=|<>|>|<|AND|OR|BETWEEN|IN|LIKE|IS)(?!\w)", // Matches SQL operators and logical keywords
   paren: "[()]", // Matches parentheses
   comma: "," // Matches commas
 };
@@ -40,7 +40,7 @@ class Tokenizer {
       const type = [...tokenTypeMap.keys()].find(name => match.groups[name] !== undefined);
 
       // Skip whitespace tokens
-      if (!type || type === "whitespace") return this.nextToken(); 
+      if (!type || type === "whitespace") return this.nextToken();
 
       let value = match.groups[type];
 
