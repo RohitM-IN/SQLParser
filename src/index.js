@@ -40,4 +40,8 @@ export function convertAstToDevextreme(ast, variables, state) {
 // const devExpressFilter = parseFilterString("FromDate <= '{TransferOutwardDocument.DocDate}' ", sampleResultObject, "TransferOutwardDocument", "789");
 // const devExpressFilter = parseFilterString("(RS2ID in ({SaleOrderStatusStmtGlobalRpt.StateID}) Or ({SaleOrderStatusStmtGlobalRpt.StateID} =0)) And (RS3ID  in (0,{SaleOrderStatusStmtGlobalRpt.RegionID}) Or {SaleOrderStatusStmtGlobalRpt.RegionID} =0 )", sampleResultObject,);
 
+// const devExpressFilter = convertSQLToAst("ISNULL(SourceID,0) = {ServiceOrderDocument.SourceID} OR ISNULL(SourceID,0) = 0");
+// const devExpressFilterresult = convertAstToDevextreme(devExpressFilter.ast, devExpressFilter.variables,{'ServiceOrderDocument.SourceID': 2});
 // console.log("DevExpress Filter:", JSON.stringify(devExpressFilter, null, 2));
+// console.log("DevExpress Result:", JSON.stringify(devExpressFilterresult, null, 2));
+

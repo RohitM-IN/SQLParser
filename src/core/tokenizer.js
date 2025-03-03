@@ -63,6 +63,22 @@ class Tokenizer {
     // If no valid token is found, throw an error with the remaining input for debugging
     throw new Error(`Unexpected token at: ${this.input.slice(this.index)}`);
   }
+
+  peekNextToken() {
+    if (this.index >= this.input.length) return null;
+    
+    const savedIndex = this.index; // Save current index
+    try {
+      return this.nextToken(); // Get next token
+    } finally {
+      this.index = savedIndex; // Restore index
+    }
+  }
+
+  reset() {
+    this.index = 0; // Reset index to the beginning of the input
+  }
+  
 }
 
 export { Tokenizer };

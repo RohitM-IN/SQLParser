@@ -139,8 +139,8 @@ function DevExpressConverter() {
             return handleInOperator(ast);
         }
 
-        const left = convertValue(ast.field);
-        const right = convertValue(ast.value);
+        const left = ast.left !== undefined ? processAstNode(ast.left) : convertValue(ast.field);
+        const right = ast.right !== undefined ? processAstNode(ast.right) : convertValue(ast.value);
         const comparison = [left, ast.operator.toLowerCase(), right];
 
         // Apply short-circuit evaluation if enabled

@@ -19,6 +19,21 @@ export function parse(input, variables = []) {
   const tokenizer = new Tokenizer(input);
   let currentToken = tokenizer.nextToken();
 
+    // // Debugging: log the tokens
+    // const tokens = [];
+    // let tempToken = currentToken;
+    // while (tempToken) {
+    //   tokens.push(tempToken);
+    //   tempToken = tokenizer.peekNextToken();
+    //   tokenizer.nextToken();
+    // }
+  
+    // console.log("Tokens:", tokens);
+    
+    // // Reset the tokenizer
+    // tokenizer.reset();
+    // currentToken = tokenizer.nextToken();
+
   // Moves to the next token in the input
   function next() {
     currentToken = tokenizer.nextToken();
@@ -68,6 +83,21 @@ export function parse(input, variables = []) {
       }
 
       next(); // Consume the closing parenthesis
+
+      // Check if the next token is an operator and process it
+    if (currentToken && currentToken.type === "operator") {
+      const operator = currentToken.value;
+      next(); // Move to the next token after the operator
+      const value = parseValue(); // Parse the value after the operator
+
+      return {
+          type: "comparison",
+          left: { type: "function", name: funcName, args },
+          operator,
+          value
+      };
+  }
+
       return { type: "function", name: funcName, args };
     }
 
