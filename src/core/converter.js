@@ -29,7 +29,7 @@ function DevExpressConverter() {
         variables = vars;
         primaryKey = PrimaryKey;
         primaryEntity = PrimaryEntity;
-        resultObject = resolveVariables(ResultObject);
+        resultObject = ResultObject;
 
         // Process the AST
         return processAstNode(ast);
@@ -329,48 +329,6 @@ function DevExpressConverter() {
             default: return false;
         }
     }
-
-    /**
-     * Resolves variables from the result object based on the placeholders.
-     * @param {Object} resultObject - The result object to resolve variables from.
-     * @returns {Object} Resolved variables.
-     */
-    function resolveVariables(resultObject) {
-        const resolvedVariables = {};
-
-        variables.forEach(placeholder => {
-            const [entityName, attributeName] = placeholder.split('.');
-
-            // Ensure the entity exists in the result object
-            if (!resultObject[entityName]) return;
-
-            const entityData = resultObject[entityName]?.Data;
-            if (!entityData || entityData.length === 0) return;
-
-            let value;
-
-            // If the entity is the primary entity, find the primary key
-            if (entityName === primaryEntity) {
-                const dataIndex = entityData.findIndex(d => d.key === primaryKey);
-                if (dataIndex !== -1) {
-                    value = entityData[dataIndex]?.value[attributeName];
-                } else {
-                    value = null;
-                }
-            }
-
-            // If not the primary entity or primary key not found, get the first data entry
-            if (value === undefined) {
-                value = entityData[0]?.value[attributeName];
-            }
-
-            resolvedVariables[placeholder] = value;
-        });
-
-        return resolvedVariables;
-    }
-
-
 
     return { init: convert };
 

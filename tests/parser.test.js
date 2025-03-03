@@ -1,9 +1,7 @@
-import { describe, it, expect } from "vitest";
-import {parse} from "../parser";
-import { sanitizeQuery } from "../sanitizer";
-import { tokenize } from "../tokenizer";
-import { convertToDevExpressFormat } from "../converter";
-import { sampleResultObject } from "../sample";
+import { describe, expect, it } from "vitest";
+import { convertToDevExpressFormat } from "../src/core/converter";
+import { parse } from "../src/core/parser";
+import { sanitizeQuery } from "../src/core/sanitizer";
 
 describe("Parser SQL to dx Filter Builder", () => {
     const testCases = [
@@ -11,7 +9,7 @@ describe("Parser SQL to dx Filter Builder", () => {
             input: "(ID = {CoreEntity0022.CompanyGroupID} OR ISNULL({CoreEntity0022.CompanyGroupID},0) = 0)",
             expected: [
                 // [
-                    "ID", "=", 42
+                "ID", "=", 42
                 // ],
                 // "or",
                 // [42, "=", null], 
@@ -41,9 +39,9 @@ describe("Parser SQL to dx Filter Builder", () => {
                 ["ID", "in", ["UOM1", "UOM2", "UOM3"]],
                 "and",
                 // [
-                    ["CompanyID", "=", 42],
-                    // "or",
-                    // [42, "=", 0],
+                ["CompanyID", "=", 42],
+                // "or",
+                // [42, "=", 0],
                 // ],
             ],
         },
@@ -56,15 +54,15 @@ describe("Parser SQL to dx Filter Builder", () => {
         {
             input: "(Level > {Area.AreaType})",
             expected: [
-                "Level",">",42
+                "Level", ">", 42
             ]
         },
         {
             input: "(ID <> {Item.ID}) AND (ItemGroupType IN ({Item.AllowedItemGroupType}))",
             expected: [
-                ["ID","<>",42],
+                ["ID", "<>", 42],
                 'and',
-                ["ItemGroupType","in",["1","2"]]
+                ["ItemGroupType", "in", ["1", "2"]]
             ]
         },
         {
@@ -72,37 +70,37 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 [
                     [
-                        ["FromDate","<=","2022-01-01"],
+                        ["FromDate", "<=", "2022-01-01"],
                         'and',
-                        ["ToDate",">=","2022-01-01"]
+                        ["ToDate", ">=", "2022-01-01"]
                     ],
                     'or',
-                    ["ToDate","=",null]
+                    ["ToDate", "=", null]
                 ],
                 "and",
                 [
-                    ["BranchID","=",42],
+                    ["BranchID", "=", 42],
                     "or",
-                    ["RefBranchID","=",null]
+                    ["RefBranchID", "=", null]
                 ],
                 "and",
                 [
-                    ["CompanyID","=",7],
+                    ["CompanyID", "=", 7],
                     // "or",
                     // [7,"=",0],
                     "or",
-                    ["CompanyID","=",null]
+                    ["CompanyID", "=", null]
                 ]
             ]
-        },        
+        },
         {
             input: "(ID <> {Item.ID}) AND ( ItemGroupType = '''')",
             expected: [
-                ["ID","<>",42],
+                ["ID", "<>", 42],
                 'and',
-                ["ItemGroupType","=",""]
+                ["ItemGroupType", "=", ""]
             ]
-        },        
+        },
         {
             input: "NULL",
             expected: null
@@ -111,16 +109,16 @@ describe("Parser SQL to dx Filter Builder", () => {
             input: "((ISNULL({0}, 0) = 0 AND CompanyID = {1}) OR CompanyID IS NULL) OR BranchID = {0} | [LeadDocument.BranchID] | [LeadDocument.CompanyID]",
             expected: [
                 // [
-                    // [
-                        // [42,"=",null],
-                        // "and",
-                        ["CompanyID", "=", 7],
-                    // ],
-                    "or",
-                    ["CompanyID","=", null],
+                // [
+                // [42,"=",null],
+                // "and",
+                ["CompanyID", "=", 7],
+                // ],
+                "or",
+                ["CompanyID", "=", null],
                 // ],
                 'or',
-                [ "BranchID", "=",  42 ]
+                ["BranchID", "=", 42]
             ]
         },
         {
@@ -129,8 +127,8 @@ describe("Parser SQL to dx Filter Builder", () => {
         },
         {
             input: "FromDate Between '10-10-2021' AND '10-10-2022'",
-            expected:[
-                "FromDate","between",[ "10-10-2021", "10-10-2022"]
+            expected: [
+                "FromDate", "between", ["10-10-2021", "10-10-2022"]
             ]
         }
     ];
@@ -138,12 +136,12 @@ describe("Parser SQL to dx Filter Builder", () => {
     testCases.forEach(({ input, expected }, index) => {
         it(`Test Case ${index + 1}: ${input}`, () => {
 
-            if(expected == undefined){
+            if (expected == undefined) {
                 expected = null
             }
 
             // Need to handle NULL as a special case
-            if(input.toLowerCase() === "null"){
+            if (input.toLowerCase() === "null") {
                 expect(null).toEqual(null);
                 return;
             }
@@ -152,7 +150,7 @@ describe("Parser SQL to dx Filter Builder", () => {
 
             const astwithVariables = parse(sanitizedSQL, variables);
 
-            if(astwithVariables == null){
+            if (astwithVariables == null) {
                 expect(null).toEqual(expected);
                 return;
             }
@@ -160,9 +158,9 @@ describe("Parser SQL to dx Filter Builder", () => {
             variables = astwithVariables.variables;
             const ast = astwithVariables.ast;
 
-            const result = convertToDevExpressFormat({ast, variables,resultObject: sampleResultObject});
+            const result = convertToDevExpressFormat({ ast, variables, resultObject: sampleData });
 
-            if(result == null || result == true || result == false){
+            if (result == null || result == true || result == false) {
                 expect([]).toEqual(expected);
                 return;
             }
@@ -171,3 +169,29 @@ describe("Parser SQL to dx Filter Builder", () => {
         });
     });
 });
+
+
+const sampleData = {
+    "CoreEntity0022.CompanyGroupID": 42,
+    "CoreEntity0022.BranchID": 7,
+    "Employee.District": 0,
+    "Employee.BranchID": 7,
+    "SaleInvoiceDocument.ContactID": 42,
+    "SaleInvoiceDocument.BranchID": 7,
+    "AccountingRule.CompanyID": 42,
+    "AccountingRule.BranchID": 7,
+    "Area.AreaType": 42,
+    "Area.BranchID": 7,
+    "Item.ID": 42,
+    "Item.BranchID": 7,
+    "Item.AllowedItemGroupType": "1,2",
+    "WorkOrderLine.ApplicableUoms": ["UOM1", "UOM2", "UOM3"],
+    "WorkOrderLine.CompanyID": 2,
+    "WorkOrderDocument.CompanyID": 42,
+    "WorkOrderDocument.BranchID": 7,
+    "TransferOutwardDocument.DocDate": "2022-01-01",
+    "TransferOutwardDocument.RefBranchID": 42,
+    "TransferOutwardDocument.CompanyID": 7,
+    "LeadDocument.BranchID": 42,
+    "LeadDocument.CompanyID": 7
+};

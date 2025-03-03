@@ -1,15 +1,15 @@
 import { Tokenizer } from "./tokenizer.js";
 
 // Define operator precedence for parsing expressions
-const precedence = { 
-  "OR": 1, "AND": 2, "=": 3, "!=": 3, ">": 3, "<": 3, ">=": 3, "<=": 3, 
-  "IN": 3, "<>": 3, "LIKE": 3, "IS": 3, "BETWEEN": 3 
+const precedence = {
+  "OR": 1, "AND": 2, "=": 3, "!=": 3, ">": 3, "<": 3, ">=": 3, "<=": 3,
+  "IN": 3, "<>": 3, "LIKE": 3, "IS": 3, "BETWEEN": 3
 };
 
 // Regular expression to check for unsupported SQL patterns (like SELECT-FROM or JOIN statements)
 const unsupportedPattern = /\bSELECT\b.*\bFROM\b|\bINNER\s+JOIN\b/i;
 
-function parse(input, variables = []) {
+export function parse(input, variables = []) {
 
   // Return null if the input contains unsupported SQL statements
   if (unsupportedPattern.test(input)) {
@@ -154,5 +154,3 @@ function parse(input, variables = []) {
   // Start parsing and return the AST with extracted variables
   return { ast: parseExpression(), variables };
 }
-
-export { parse };
