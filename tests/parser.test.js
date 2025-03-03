@@ -138,6 +138,14 @@ describe("Parser SQL to dx Filter Builder", () => {
                 "or",
                 ["BranchID", "!=", 12]
             ]
+        },
+        {
+            input: "ISNULL(SourceID,0) = {ServiceOrderDocument.SourceID} OR ISNULL(SourceID,0) = 0",
+            expected: [
+                ["SourceID", "=", 2],
+                "or",
+                ["SourceID", "=", 0]
+            ]
         }
     ];
 
@@ -201,5 +209,6 @@ const sampleData = {
     "TransferOutwardDocument.RefBranchID": 42,
     "TransferOutwardDocument.CompanyID": 7,
     "LeadDocument.BranchID": 42,
-    "LeadDocument.CompanyID": 7
+    "LeadDocument.CompanyID": 7,
+    "ServiceOrderDocument.SourceID": 2
 };
