@@ -10,6 +10,7 @@
     "import": "./src/index.js",
     "require": "./src/index.js"
   },
+  "types": "src/@types/default.d.ts",
   "keywords": [
     "sql",
     "parser",
