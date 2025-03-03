@@ -130,6 +130,14 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 "FromDate", "between", ["10-10-2021", "10-10-2022"]
             ]
+        },
+        {
+            input: "BranchID is Null OR BranchID is not 12",
+            expected: [
+                ["BranchID", "=", null],
+                "or",
+                ["BranchID", "!=", 12]
+            ]
         }
     ];
 
