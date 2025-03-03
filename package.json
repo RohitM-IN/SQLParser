@@ -1,16 +1,26 @@
 {
   "name": "sqlparser-devexpress",
-  "version": "2.0.1",
+  "version": "2.0.3",
   "main": "index.js",
   "type": "module",
   "scripts": {
     "test": "vitest"
   },
-  "keywords": [],
+  "keywords": [
+    "sql",
+    "parser",
+    "DevExpress",
+    "sql-parser",
+    "database",
+    "query",
+    "javascript",
+    "sql-query",
+    "npm-package"
+  ],
   "author": "Rohit Mahajan",
   "license": "MIT",
   "description": "",
-  "dependencies": {
+  "devDependencies": {
     "vitest": "^3.0.5"
   }
 }
