@@ -6,8 +6,8 @@ const tokenPatterns = {
   number: "\\d+", // Matches numerical values
   placeholder: "'?\\{[^}]+\\}'?", // Matches placeholders like {variable} or '{variable}'
   string: "'(?:''|[^'])*'", // Matches strings, allowing for escaped single quotes ('')
+  operator: "=>|<=|!=|>=|=|<>|>|<|\\bAND\\b|\\bOR\\b|\\bBETWEEN\\b|\\bIN\\b|\\bLIKE\\b|\\bIS NOT\\b|\\bNOT LIKE\\b|\\bIS\\b", // Matches SQL operators and logical keywords
   identifier: "[\\w.]+", // Matches identifiers, including table.column format
-  operator: "(?<!\w)(=>|<=|!=|>=|=|<>|>|<|AND|OR|BETWEEN|IN|LIKE|IS)(?!\w)", // Matches SQL operators and logical keywords
   paren: "[()]", // Matches parentheses
   comma: "," // Matches commas
 };
@@ -47,6 +47,16 @@ class Tokenizer {
       // Remove surrounding single quotes from placeholders
       if (type === "placeholder") value = value.replace(/^['"]|['"]$/g, "");
 
+      if (type === "operator") {
+        const lowerValue = value.toLowerCase();
+        
+        if (lowerValue === "is") {
+          value = "=";
+        } else if (lowerValue === "is not") {
+          value = "!=";
+        }
+      }
+      
       return { type, value };
     }
 
