@@ -1,14 +1,14 @@
 {
-  "name": "sqlparser",
-  "version": "1.0.0",
+  "name": "sqlparser-devexpress",
+  "version": "2.0.1",
   "main": "index.js",
   "type": "module",
-"scripts": {
+  "scripts": {
     "test": "vitest"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Rohit Mahajan",
+  "license": "MIT",
   "description": "",
   "dependencies": {
     "vitest": "^3.0.5"
