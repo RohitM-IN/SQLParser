@@ -3,7 +3,7 @@ import { sanitizeQuery } from "./sanitizer.js";
 import { convertToDevExpressFormat } from "./converter.js";
 import { sampleResultObject } from "./sample.js";
 
-export function parseFilterString(filterString, sampleData = null) {
+export function parseFilterString(filterString, sampleData = null, primaryEntity = null, primaryKey = null) {
     if (filterString.toUpperCase().startsWith("SELECT")) return null; // Skip full SQL queries
 
     let { sanitizedSQL, extractedVariables } = sanitizeQuery(filterString);
@@ -16,10 +16,11 @@ export function parseFilterString(filterString, sampleData = null) {
     const astTree = parsedResult.ast;
     console.log("AST Tree:", JSON.stringify(astTree, null, 2), "\n");
 
-    return convertToDevExpressFormat(astTree, extractedVariables, sampleData);
+    return convertToDevExpressFormat({ ast: astTree, variables: extractedVariables, resultObject: sampleData, primaryEntity, primaryKey });
 }
 
 // Example usage
-const devExpressFilter = parseFilterString("((ISNULL({0}, 0) = 0 AND CompanyID = {1}) OR CompanyID IS NULL) OR BranchID = {0} | [LeadDocument.BranchID] | [LeadDocument.CompanyID]", sampleResultObject);
+// const devExpressFilter = parseFilterString("((ISNULL({0}, 0) = 0 AND CompanyID = {1}) OR CompanyID IS NULL) OR BranchID = {0} | [LeadDocument.BranchID] | [LeadDocument.CompanyID]", sampleResultObject);
+const devExpressFilter = parseFilterString("FromDate <= '{TransferOutwardDocument.DocDate}' ", sampleResultObject, "TransferOutwardDocument", "789");
 
 console.log("DevExpress Filter:", JSON.stringify(devExpressFilter, null, 2));

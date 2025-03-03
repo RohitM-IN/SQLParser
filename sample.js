@@ -107,6 +107,15 @@ export const sampleResultObject = {
                     RefBranchID: 42,
                     CompanyID: 7
                 }
+            },
+            {
+                key: "123",
+                EntityKey: "TransferOutwardDocument",
+                value: {
+                    DocDate: "2024-01-01",
+                    RefBranchID: null,
+                    CompanyID: null
+                }
             }
         ]
     },

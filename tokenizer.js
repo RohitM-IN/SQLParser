@@ -45,7 +45,7 @@ class Tokenizer {
       let value = match.groups[type];
 
       // Remove surrounding single quotes from placeholders
-      if (type === "placeholder") value = value.replace(/^'|'"$/g, "");
+      if (type === "placeholder") value = value.replace(/^['"]|['"]$/g, "");
 
       return { type, value };
     }

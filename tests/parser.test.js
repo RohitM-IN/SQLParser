@@ -160,7 +160,7 @@ describe("Parser SQL to dx Filter Builder", () => {
             variables = astwithVariables.variables;
             const ast = astwithVariables.ast;
 
-            const result = convertToDevExpressFormat(ast, variables,sampleResultObject);
+            const result = convertToDevExpressFormat({ast, variables,resultObject: sampleResultObject});
 
             if(result == null || result == true || result == false){
                 expect([]).toEqual(expected);
