@@ -1,6 +1,6 @@
 {
   "name": "sqlparser-devexpress",
-  "version": "2.0.7",
+  "version": "2.1.0",
   "main": "src/index.js",
   "type": "module",
   "scripts": {
@@ -10,6 +10,7 @@
     "import": "./src/index.js",
     "require": "./src/index.js"
   },
+  "types": "src/@types/default.d.ts",
   "keywords": [
     "sql",
     "parser",

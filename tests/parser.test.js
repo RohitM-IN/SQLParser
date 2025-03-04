@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { convertToDevExpressFormat } from "../src/core/converter";
 import { parse } from "../src/core/parser";
 import { sanitizeQuery } from "../src/core/sanitizer";
+import { convertAstToDevextreme, convertSQLToAst } from "../src";
 
 describe("Parser SQL to dx Filter Builder", () => {
     const testCases = [
@@ -30,13 +31,13 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 ["ContactID", "=", 42],
                 "and",
-                ["AddressType", "in", [2, 4]],
+                [["AddressType", "=", 2], 'or', ["AddressType", "=", 4]],
             ],
         },
         {
             input: "ID IN ({WorkOrderLine.ApplicableUoms}) AND (CompanyID = {WorkOrderDocument.CompanyID} OR {WorkOrderDocument.CompanyID} = 0)",
             expected: [
-                ["ID", "in", ["UOM1", "UOM2", "UOM3"]],
+                [["ID", "=", "UOM1"] , 'or', ["ID", "=", "UOM2"], 'or', ["ID", "=", "UOM3"]],
                 "and",
                 // [
                 ["CompanyID", "=", 42],
@@ -62,7 +63,7 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 ["ID", "<>", 42],
                 'and',
-                ["ItemGroupType", "in", ["1", "2"]]
+                [["ItemGroupType", "=", "1"], 'or', ["ItemGroupType", "=", "2"]]
             ]
         },
         {
@@ -103,7 +104,7 @@ describe("Parser SQL to dx Filter Builder", () => {
         },
         {
             input: "NULL",
-            expected: null
+            expected: []
         },
         {
             input: "((ISNULL({0}, 0) = 0 AND CompanyID = {1}) OR CompanyID IS NULL) OR BranchID = {0} | [LeadDocument.BranchID] | [LeadDocument.CompanyID]",
@@ -146,6 +147,10 @@ describe("Parser SQL to dx Filter Builder", () => {
                 "or",
                 ["SourceID", "=", 0]
             ]
+        },
+        {
+            input: "CompanyID = CompanyID2 = {AccountingRule.CompanyID}",
+            expected: "Error: Invalid comparison: CompanyID = CompanyID2",
         }
     ];
 
@@ -156,25 +161,23 @@ describe("Parser SQL to dx Filter Builder", () => {
                 expected = null
             }
 
-            // Need to handle NULL as a special case
-            if (input.toLowerCase() === "null") {
-                expect(null).toEqual(null);
+            let astwithVariables;
+            try {
+                astwithVariables = convertSQLToAst(input);
+            } catch (error) {
+                expect(error.message).toEqual(expected.replace("Error: ",""));
                 return;
             }
-
-            let { sanitizedSQL, variables } = sanitizeQuery(input);
-
-            const astwithVariables = parse(sanitizedSQL, variables);
 
             if (astwithVariables == null) {
                 expect(null).toEqual(expected);
                 return;
             }
 
-            variables = astwithVariables.variables;
+            const variables = astwithVariables.variables;
             const ast = astwithVariables.ast;
 
-            const result = convertToDevExpressFormat({ ast, variables, resultObject: sampleData });
+            const result = convertAstToDevextreme(ast, variables, sampleData);
 
             if (result == null || result == true || result == false) {
                 expect([]).toEqual(expected);
@@ -183,7 +186,7 @@ describe("Parser SQL to dx Filter Builder", () => {
 
             expect(result).toEqual(expected);
         });
-    });
+      });
 });
 
 

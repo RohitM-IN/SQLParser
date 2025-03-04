@@ -3,7 +3,7 @@ import { parse } from "./core/parser.js";
 import { sanitizeQuery } from "./core/sanitizer.js";
 
 
-export function convertSQLToAst(filterString, SampleData = null, enableConsoleLogs = false) {
+export function convertSQLToAst(filterString, enableConsoleLogs = false) {
     let { sanitizedSQL, extractedVariables } = sanitizeQuery(filterString);
     enableConsoleLogs && console.log("Sanitized SQL:", sanitizedSQL, "\n");
 
