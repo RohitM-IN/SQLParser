@@ -20,18 +20,19 @@ function DevExpressConverter() {
    * @param {Object} ast - The abstract syntax tree
    * @param {Array} vars - Array of variable names
    * @param {Object} ResultObject - Optional object for placeholder resolution
-   * @param {string} primaryEntity - Optional primary entity name
-   * @param {string} primaryKey - Optional primary key value
    * @returns {Array|null} DevExpress format filter
    */
-    function convert(ast, vars, ResultObject = null, PrimaryEntity = null, PrimaryKey = null) {
+    function convert(ast, vars, ResultObject = null) {
         // Set up global context
         variables = vars;
-        primaryKey = PrimaryKey;
-        primaryEntity = PrimaryEntity;
         resultObject = ResultObject;
 
         // Process the AST
+        let result = processAstNode(ast);
+
+        // Handle special cases for short circuit
+        if(result === true || result === false || result === null) return [];
+
         return processAstNode(ast);
     }
 
@@ -191,6 +192,16 @@ function DevExpressConverter() {
             }
         }
 
+        if(Array.isArray(resolvedValue) && resolvedValue.length){
+
+            return Array.prototype.concat
+             .apply(
+               [],
+               resolvedValue.map((i) => [[ast.field, '=', i], 'or']),
+             )
+             .slice(0, -1)
+        }
+
         return [ast.field, "in", resolvedValue];
     }
 
@@ -346,6 +357,6 @@ const devExpressConverter = DevExpressConverter();
  * @param {string} primaryKey - Optional primary key value
  * @returns {Array|null} DevExpress format filter
  */
-export function convertToDevExpressFormat({ ast, variables, resultObject = null, primaryEntity = null, primaryKey = null }) {
-    return devExpressConverter.init(ast, variables, resultObject, primaryEntity, primaryKey);
+export function convertToDevExpressFormat({ ast, variables, resultObject = null }) {
+    return devExpressConverter.init(ast, variables, resultObject);
 }
