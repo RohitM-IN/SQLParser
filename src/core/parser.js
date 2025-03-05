@@ -25,9 +25,9 @@ export function parse(input, variables = []) {
 	// const tokens = [];
 	// let tempToken = currentToken;
 	// while (tempToken) {
-	//   tokens.push(tempToken);
-	//   tempToken = tokenizer.peekNextToken();
-	//   tokenizer.nextToken();
+	// 	tokens.push(tempToken);
+	// 	tempToken = tokenizer.peekNextToken();
+	// 	tokenizer.nextToken();
 	// }
 
 	// console.log("Tokens:", tokens);

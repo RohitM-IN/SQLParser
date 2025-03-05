@@ -31,7 +31,7 @@ function DevExpressConverter() {
         let result = processAstNode(ast);
 
         // Handle special cases for short circuit
-        if(result === true || result === false || result === null) return [];
+        if (result === true || result === false || result === null) return [];
 
         return processAstNode(ast);
     }
@@ -192,17 +192,13 @@ function DevExpressConverter() {
             }
         }
 
-        if(Array.isArray(resolvedValue) && resolvedValue.length){
+        if (Array.isArray(resolvedValue) && resolvedValue.length) {
 
-            return Array.prototype.concat
-             .apply(
-               [],
-               resolvedValue.map((i) => [[ast.field, '=', i], 'or']),
-             )
-             .slice(0, -1)
+            return resolvedValue.flatMap(i => [[ast.field, '=', i], 'or']).slice(0, -1);
+
         }
 
-        return [ast.field, "in", resolvedValue];
+        return [ast.field, "=", resolvedValue];
     }
 
     /**
@@ -329,7 +325,14 @@ function DevExpressConverter() {
      * @returns {boolean|null} The result of the evaluation or null if not evaluable.
      */
     function evaluateExpression(left, operator, right) {
-        if (isNaN(left) || isNaN(right) || left === null || right === null) return null;
+        if ((left !== null && isNaN(left)) || (right !== null && isNaN(right))) return null;
+
+        if (left === null || right === null) {
+            if (operator === '=' || operator === '==') return left === right;
+            if (operator === '<>' || operator === '!=') return left !== right;
+            return null; // Any comparison with null should return null
+        }
+
         switch (operator) {
             case '=': case '==': return left === right;
             case '<>': case '!=': return left !== right;
@@ -337,7 +340,7 @@ function DevExpressConverter() {
             case '>=': return left >= right;
             case '<': return left < right;
             case '<=': return left <= right;
-            default: return false;
+            default: return null; // Invalid operator
         }
     }
 
