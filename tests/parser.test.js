@@ -175,6 +175,14 @@ describe("Parser SQL to dx Filter Builder", () => {
                     true
                 ]
             ]
+        },
+        {
+            input: 'AddressType NOT IN (2, 4)',
+            expected: [
+                ["AddressType", "!=", 2],
+                "or",
+                ["AddressType", "!=", 4]
+            ]
         }
     ];
 

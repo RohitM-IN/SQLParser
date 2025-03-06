@@ -208,8 +208,10 @@ export function parse(input, variables = []) {
 			return { type: "placeholder", value: val };
 		}
 
+		operatorToken = operatorToken.toUpperCase();
+
 		// Handle IN operator which requires a list of values
-		if (operatorToken && operatorToken.toUpperCase() === "IN") return parseInList(token);
+		if (operatorToken && (operatorToken === "IN" || operatorToken === "NOT IN")) return parseInList(token);
 
 		throw new Error(`Unexpected value: ${token.value}`);
 	}

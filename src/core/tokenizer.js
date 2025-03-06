@@ -6,7 +6,7 @@ const tokenPatterns = {
   number: "\\d+", // Matches numerical values
   placeholder: "'?\\{[^}]+\\}'?", // Matches placeholders like {variable} or '{variable}'
   string: "'(?:''|[^'])*'", // Matches strings, allowing for escaped single quotes ('')
-  operator: "=>|<=|!=|>=|=|<>|>|<|\\bAND\\b|\\bOR\\b|\\bBETWEEN\\b|\\bIN\\b|\\bLIKE\\b|\\bIS NOT\\b|\\bNOT LIKE\\b|\\bIS\\b", // Matches SQL operators and logical keywords
+  operator: "=>|<=|!=|>=|=|<>|>|<|\\bAND\\b|\\bOR\\b|\\bBETWEEN\\b|\\bIN\\b|\\bNOT IN\\b|\\bLIKE\\b|\\bIS NOT\\b|\\bNOT LIKE\\b|\\bIS\\b", // Matches SQL operators and logical keywords
   identifier: "[\\w.]+", // Matches identifiers, including table.column format
   paren: "[()]", // Matches parentheses
   comma: "," // Matches commas
@@ -49,14 +49,14 @@ class Tokenizer {
 
       if (type === "operator") {
         const lowerValue = value.toLowerCase();
-        
+
         if (lowerValue === "is") {
           value = "=";
         } else if (lowerValue === "is not") {
           value = "!=";
         }
       }
-      
+
       return { type, value };
     }
 
@@ -66,7 +66,7 @@ class Tokenizer {
 
   peekNextToken() {
     if (this.index >= this.input.length) return null;
-    
+
     const savedIndex = this.index; // Save current index
     try {
       return this.nextToken(); // Get next token
@@ -78,7 +78,7 @@ class Tokenizer {
   reset() {
     this.index = 0; // Reset index to the beginning of the input
   }
-  
+
 }
 
 export { Tokenizer };

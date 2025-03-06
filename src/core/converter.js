@@ -136,8 +136,8 @@ function DevExpressConverter() {
         }
 
         // Handle "IN" condition, including comma-separated values
-        if (operator === "IN") {
-            return handleInOperator(ast);
+        if (operator === "IN" || operator === "NOT IN") {
+            return handleInOperator(ast, operator);
         }
 
         const left = ast.left !== undefined ? processAstNode(ast.left) : convertValue(ast.field);
@@ -179,7 +179,7 @@ function DevExpressConverter() {
      * @param {Object} ast - The comparison operator AST node.
      * @returns {Array} DevExpress format filter.
      */
-    function handleInOperator(ast) {
+    function handleInOperator(ast, operator) {
         let resolvedValue = convertValue(ast.value);
 
         // Handle comma-separated values in a string
@@ -192,13 +192,14 @@ function DevExpressConverter() {
             }
         }
 
+        let operatorToken = operator === "IN" ? '=' : operator === "NOT IN" ? '!=' : operator;
+        let joinOperatorToken = operator === "IN" ? 'or' : operator === "NOT IN" ? 'and' : operator;
+
         if (Array.isArray(resolvedValue) && resolvedValue.length) {
-
-            return resolvedValue.flatMap(i => [[ast.field, '=', i], 'or']).slice(0, -1);
-
+            return resolvedValue.flatMap(i => [[ast.field, operatorToken, i], joinOperatorToken]).slice(0, -1);
         }
 
-        return [ast.field, "=", resolvedValue];
+        return [ast.field, operatorToken, resolvedValue];
     }
 
     /**
