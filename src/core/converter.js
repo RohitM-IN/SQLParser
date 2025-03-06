@@ -198,6 +198,8 @@ function DevExpressConverter() {
             } else {
                 resolvedValue = firstValue;
             }
+        } else if (typeof resolvedValue === 'string' && resolvedValue.includes(',')) {
+            resolvedValue = resolvedValue.split(',').map(v => v.trim());
         }
 
         let operatorToken = operator === "IN" ? '=' : operator === "NOT IN" ? '!=' : operator;
