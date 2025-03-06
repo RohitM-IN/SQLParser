@@ -6,17 +6,15 @@
 // import { convertToDevExpressFormat } from "./core/converter.js";
 // import { parse } from "./core/parser.js";
 // import { sanitizeQuery } from "./core/sanitizer.js";
-// import { convertAstToDevextreme, convertSQLToAst } from "./index.js";
 
 // const sampleData = {
 //     'LeadStatementGlobalRpt.StateID': null,
 //     'LeadStatementGlobalRpt.RegionID': null,
-//     'ServiceOrderDocument.SourceID': 2
+//     'ServiceOrderDocument.SourceID': 2,
+//     'CustomerOrders.OrderID': 76548
 // }
 
 // export function parseFilterString(filterString, sampleData = null) {
-//     if (filterString.toUpperCase().startsWith("SELECT")) return null; // Skip full SQL queries
-
 //     let { sanitizedSQL, extractedVariables } = sanitizeQuery(filterString);
 //     console.log("Sanitized SQL:", sanitizedSQL, "\n");
 
@@ -30,9 +28,9 @@
 //     return convertToDevExpressFormat({ ast: astTree, variables: extractedVariables, resultObject: sampleData });
 // }
 
-// // const devexpress = parseFilterString("(RS2ID in ({LeadStatementGlobalRpt.StateID}) Or ({LeadStatementGlobalRpt.StateID} =0)) And (RS3ID  in (0,{LeadStatementGlobalRpt.RegionID}) Or {LeadStatementGlobalRpt.RegionID} =0 )", sampleData);
-// const devexpress = parseFilterString("{LeadStatementGlobalRpt.RegionID} =0", sampleData);
+// const devexpress = parseFilterString("OrderID = {CustomerOrders.OrderID} AND Status IN (1, 3)", sampleData);
 // console.log("DevExpress Filter:", JSON.stringify(devexpress, null, 2));
+// // const devexpress = parseFilterString("(RS2ID in ({LeadStatementGlobalRpt.StateID}) Or ({LeadStatementGlobalRpt.StateID} =0)) And (RS3ID  in (0,{LeadStatementGlobalRpt.RegionID}) Or {LeadStatementGlobalRpt.RegionID} =0 )", sampleData);
 
 // // const devExpressFilter = convertSQLToAst("(RS2ID in ({LeadStatementGlobalRpt.StateID}) Or ({LeadStatementGlobalRpt.StateID} =0)) And (RS3ID  in (0,{LeadStatementGlobalRpt.RegionID}) Or {LeadStatementGlobalRpt.RegionID} =0 ) ");
 // // const devExpressFilterresult = convertAstToDevextreme(devExpressFilter.ast, devExpressFilter.variables, sampleData);
