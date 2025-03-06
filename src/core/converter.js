@@ -1,31 +1,25 @@
-const logicalOperators = ['and', 'or'];
+import { LOGICAL_OPERATORS } from "../constants.js";
 
 /**
  * Main conversion function that sets up the global context
- * @param {Object} ast - The abstract syntax tree
- * @param {Array} vars - Array of variable names
- * @param {Object} results - Optional object for placeholder resolution
  * @returns {Array|null} DevExpress format filter
  */
 function DevExpressConverter() {
     // Global variables accessible throughout the converter
     let resultObject = null;
-    let primaryEntity = null;
-    let primaryKey = null;
-    let variables = [];
     const EnableShortCircuit = true;
 
     /**
    * Main conversion function that sets up the global context
    * @param {Object} ast - The abstract syntax tree
-   * @param {Array} vars - Array of variable names
    * @param {Object} ResultObject - Optional object for placeholder resolution
+   * @param {boolean} enableShortCircuit - Optional enabling and disabling the shortcircuit ie evaluating value = value scenario 
    * @returns {Array|null} DevExpress format filter
    */
-    function convert(ast, vars, ResultObject = null) {
+    function convert(ast, ResultObject = null, enableShortCircuit = true) {
         // Set up global context
-        variables = vars;
         resultObject = ResultObject;
+        EnableShortCircuit = enableShortCircuit;
 
         // Process the AST
         let result = processAstNode(ast);
@@ -111,8 +105,8 @@ function DevExpressConverter() {
 
         // Detect and flatten nested logical expressions
         if (parentOperator === null) {
-            if (left.length === 3 && logicalOperators.includes(left[1])) parentOperator = left[1];
-            if (right.length === 3 && logicalOperators.includes(right[1])) parentOperator = right[1];
+            if (left.length === 3 && LOGICAL_OPERATORS.includes(left[1])) parentOperator = left[1];
+            if (right.length === 3 && LOGICAL_OPERATORS.includes(right[1])) parentOperator = right[1];
         }
 
         // Flatten nested logical expressions if applicable
@@ -377,12 +371,10 @@ const devExpressConverter = DevExpressConverter();
 /**
  * Converts an abstract syntax tree to DevExpress format
  * @param {Object} ast - The abstract syntax tree
- * @param {Array} variables - Array of variable names
  * @param {Object} resultObject - Optional object for placeholder resolution
- * @param {string} primaryEntity - Optional primary entity name
- * @param {string} primaryKey - Optional primary key value
+ * @param {string} enableShortCircuit - Optional enabling and disabling the shortcircuit ie evaluating value = value scenario 
  * @returns {Array|null} DevExpress format filter
  */
-export function convertToDevExpressFormat({ ast, variables, resultObject = null }) {
-    return devExpressConverter.init(ast, variables, resultObject);
+export function convertToDevExpressFormat({ ast, resultObject = null, enableShortCircuit = true }) {
+    return devExpressConverter.init(ast, resultObject,enableShortCircuit);
 }

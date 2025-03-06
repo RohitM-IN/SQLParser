@@ -9,3 +9,5 @@ export const OPERATOR_PRECEDENCE = {
 
 // Regular expression to check for unsupported SQL patterns (like SELECT-FROM or JOIN statements)
 export const UNSUPPORTED_PATTERN = /\bSELECT\b.*\bFROM\b|\bINNER\s+JOIN\b/i;
+
+export const LOGICAL_OPERATORS = ['and', 'or'];

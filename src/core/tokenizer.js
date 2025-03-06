@@ -1,4 +1,4 @@
-import { LITERALS } from "../constants";
+import { LITERALS } from "../constants.js";
 
 // Define regex patterns for different token types
 const tokenPatterns = {
