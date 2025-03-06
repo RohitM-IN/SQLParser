@@ -145,7 +145,11 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 ["SourceID", "=", 2],
                 "or",
-                ["SourceID", "=", 0]
+                ["SourceID", "=", null],
+                "or",
+                ["SourceID", "=", 0],
+                "or",
+                ["SourceID", "=", null]
             ]
         },
         {
@@ -156,23 +160,19 @@ describe("Parser SQL to dx Filter Builder", () => {
             input: "(CompanyID = {LeadDocument.CompanyID} OR ISNULL(CompanyID,0) = 0) AND (ISNULL(IsSubdealer,0) = {LeadDocument.AllowSubDealer})",
             expected: [
                 [
-                    [
-                        "CompanyID",
-                        "=",
-                        7
-                    ],
+                    ["CompanyID", "=", 7],
                     "or",
                     [
-                        "CompanyID",
-                        "=",
-                        0
+                        ["CompanyID", "=", 0],
+                        "or",
+                        ["CompanyID", "=", null]
                     ]
                 ],
                 "and",
                 [
-                    "IsSubdealer",
-                    "=",
-                    true
+                    ["IsSubdealer", "=", true],
+                    "or",
+                    ["IsSubdealer", "=", null]
                 ]
             ]
         },
@@ -180,7 +180,7 @@ describe("Parser SQL to dx Filter Builder", () => {
             input: 'AddressType NOT IN (2, 4)',
             expected: [
                 ["AddressType", "!=", 2],
-                "or",
+                "and",
                 ["AddressType", "!=", 4]
             ]
         }

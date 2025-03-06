@@ -142,7 +142,15 @@ function DevExpressConverter() {
 
         const left = ast.left !== undefined ? processAstNode(ast.left) : convertValue(ast.field);
         const right = ast.right !== undefined ? processAstNode(ast.right) : convertValue(ast.value);
-        const comparison = [left, ast.operator.toLowerCase(), right];
+        const operatorToken = ast.operator.toLowerCase();
+
+        let comparison = [left, operatorToken, right];
+
+        if (isFunctionNullCheck(ast.left, true)) {
+            comparison = [[left, operatorToken, right], 'or', [left, operatorToken, null]];
+        } else if (isFunctionNullCheck(ast.right, true)) {
+            comparison = [[left, operatorToken, right], 'or', [right, operatorToken, null]];
+        }
 
         // Apply short-circuit evaluation if enabled
         if (EnableShortCircuit) {
@@ -222,7 +230,7 @@ function DevExpressConverter() {
             }
 
             // Special handling for ISNULL function
-            if (val.type === "function" && val.name === "ISNULL" && val.args?.length >= 2) {
+            if (isFunctionNullCheck(val)) {
                 return convertValue(val.args[0]);
             }
 
@@ -256,6 +264,18 @@ function DevExpressConverter() {
     function isNullCheck(node, valueNode) {
         return node?.type === "function" && node.name === "ISNULL" && valueNode?.type === "value";
     }
+
+    /**
+     * Checks if a node is a ISNULL function without value
+     * @param {Object} node 
+     * @returns {boolean} True if this is an ISNULL check.
+     */
+    function isFunctionNullCheck(node, isPlaceholderCheck = false) {
+        const isValidFunction = node?.type === "function" && node?.name === "ISNULL" && node?.args?.length >= 2;
+
+        return isPlaceholderCheck ? isValidFunction && node?.args[0]?.value?.type !== "placeholder" : isValidFunction;
+    }
+
 
     /**
      * Determines whether the logical tree should be flattened.
