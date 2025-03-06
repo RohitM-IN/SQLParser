@@ -9,7 +9,7 @@ const tokenPatterns = {
   placeholder: "'?\\{[^}]+\\}'?", // Matches placeholders like {variable} or '{variable}'
   string: "\\('\\w+\\'\\)|'(?:''|[^'])*'", // Matches strings, allowing for escaped single quotes ('')
   operator: "=>|<=|!=|>=|=|<>|>|<|\\bAND\\b|\\bOR\\b|\\bBETWEEN\\b|\\bIN\\b|\\bNOT IN\\b|\\bLIKE\\b|\\bIS NOT\\b|\\bNOT LIKE\\b|\\bIS\\b", // Matches SQL operators and logical keywords
-  identifier: "[\\w.]+", // Matches identifiers, including table.column format
+  identifier: "[\\w.]+|\"[^\"]+\"|\\[[^\\]]+\\]", // Matches regular identifiers, quoted identifiers ("identifier"), and bracketed identifiers [identifier]
   paren: "[()]", // Matches standalone parentheses
   comma: "," // Matches commas
 };
@@ -59,8 +59,15 @@ class Tokenizer {
         }
       }
 
-      if (LITERALS.includes(type)) value = value.replace(/^[(]|[)]$/g, "")
+      if (LITERALS.includes(type)){
+        value = value.replace(/^[(]|[)]$/g, "");
+      }
 
+      if (type === "identifier") {
+        value = value.replace(/^["\[]|["\]]$/g, "");
+      }
+      
+      
       return { type, value };
     }
 
