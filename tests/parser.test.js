@@ -37,7 +37,7 @@ describe("Parser SQL to dx Filter Builder", () => {
         {
             input: "ID IN ({WorkOrderLine.ApplicableUoms}) AND (CompanyID = {WorkOrderDocument.CompanyID} OR {WorkOrderDocument.CompanyID} = 0)",
             expected: [
-                [["ID", "=", "UOM1"] , 'or', ["ID", "=", "UOM2"], 'or', ["ID", "=", "UOM3"]],
+                [["ID", "=", "UOM1"], 'or', ["ID", "=", "UOM2"], 'or', ["ID", "=", "UOM3"]],
                 "and",
                 // [
                 ["CompanyID", "=", 42],
@@ -151,6 +151,30 @@ describe("Parser SQL to dx Filter Builder", () => {
         {
             input: "CompanyID = CompanyID2 = {AccountingRule.CompanyID}",
             expected: "Error: Invalid comparison: CompanyID = CompanyID2",
+        },
+        {
+            input: "(CompanyID = {LeadDocument.CompanyID} OR ISNULL(CompanyID,0) = 0) AND (ISNULL(IsSubdealer,0) = {LeadDocument.AllowSubDealer})",
+            expected: [
+                [
+                    [
+                        "CompanyID",
+                        "=",
+                        7
+                    ],
+                    "or",
+                    [
+                        "CompanyID",
+                        "=",
+                        0
+                    ]
+                ],
+                "and",
+                [
+                    "IsSubdealer",
+                    "=",
+                    true
+                ]
+            ]
         }
     ];
 
@@ -165,7 +189,7 @@ describe("Parser SQL to dx Filter Builder", () => {
             try {
                 astwithVariables = convertSQLToAst(input);
             } catch (error) {
-                expect(error.message).toEqual(expected.replace("Error: ",""));
+                expect(error.message).toEqual(expected.replace("Error: ", ""));
                 return;
             }
 
@@ -186,7 +210,7 @@ describe("Parser SQL to dx Filter Builder", () => {
 
             expect(result).toEqual(expected);
         });
-      });
+    });
 });
 
 
@@ -213,5 +237,6 @@ const sampleData = {
     "TransferOutwardDocument.CompanyID": 7,
     "LeadDocument.BranchID": 42,
     "LeadDocument.CompanyID": 7,
-    "ServiceOrderDocument.SourceID": 2
+    "ServiceOrderDocument.SourceID": 2,
+    "LeadDocument.AllowSubDealer": true
 };
