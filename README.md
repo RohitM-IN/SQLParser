@@ -11,6 +11,12 @@ SQLParser is a JavaScript library that converts SQL `WHERE` clauses into a struc
 - **Short-Circuit Optimization**: By default, eliminates `value = value` expressions for DevExpress compatibility (can be disabled for performance optimization).
 - **Separation of Concerns**: Generate AST once, then use it for multiple state updates.
 
+## Installation
+
+```sh
+npm install sqlparser-devexpress
+```
+
 ## Example Workflow
 
 ### **Step 1: Input SQL**
@@ -68,8 +74,6 @@ The parser identifies placeholders within the SQL query and extracts them for dy
 
 These extracted variables can be used to fetch the corresponding state values in the application. You can store them in a `Record<string, any>`, where the key is the placeholder name, and the value is the resolved data from the application's state.
 
-
-
 ### **Step 3: Convert AST to DevExpress Format**
 
 ```javascript
@@ -96,12 +100,6 @@ console.log("DevExpress Filter:", JSON.stringify(devexpressFilter, null, 2));
     ["Status", "=", 3]
   ]
 ]
-```
-
-## Installation
-
-```sh
-npm install sqlparser-devexpress
 ```
 
 ## API Reference
@@ -140,3 +138,4 @@ Contributions are welcome! Feel free to open issues or submit pull requests.
 ## License
 
 MIT
+
