@@ -183,6 +183,14 @@ describe("Parser SQL to dx Filter Builder", () => {
                 "and",
                 ["AddressType", "!=", 4]
             ]
+        },
+        {
+            input: "AddressType IN ('2', ('4'))",
+            expected: [
+                ["AddressType", "=", '2'],
+                "or",
+                ["AddressType", "=", '4']
+            ]
         }
     ];
 
