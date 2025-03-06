@@ -1,6 +1,6 @@
 {
   "name": "sqlparser-devexpress",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "main": "src/index.js",
   "type": "module",
   "scripts": {
@@ -11,6 +11,10 @@
     "require": "./src/index.js"
   },
   "types": "src/@types/default.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RohitM-IN/SQLParser.git"
+  },
   "keywords": [
     "sql",
     "parser",

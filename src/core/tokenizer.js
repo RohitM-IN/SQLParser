@@ -1,14 +1,16 @@
+import { LITERALS } from "../constants.js";
+
 // Define regex patterns for different token types
 const tokenPatterns = {
   whitespace: "\\s+", // Matches spaces, tabs, and newlines
   function: "\\b(ISNULL)\\b", // Matches function names like ISNULL (case-insensitive)
-  null: "\\bNULL\\b", // Matches NULL as a keyword
-  number: "\\d+", // Matches numerical values
+  null: "\\bNULL\\b|\\(\\s*NULL\\s*\\)", // Matches NULL as a keyword
+  number: "\\(\\d+\\)|\\d+", // Matches numbers while stripping unnecessary parentheses
   placeholder: "'?\\{[^}]+\\}'?", // Matches placeholders like {variable} or '{variable}'
-  string: "'(?:''|[^'])*'", // Matches strings, allowing for escaped single quotes ('')
-  operator: "=>|<=|!=|>=|=|<>|>|<|\\bAND\\b|\\bOR\\b|\\bBETWEEN\\b|\\bIN\\b|\\bLIKE\\b|\\bIS NOT\\b|\\bNOT LIKE\\b|\\bIS\\b", // Matches SQL operators and logical keywords
-  identifier: "[\\w.]+", // Matches identifiers, including table.column format
-  paren: "[()]", // Matches parentheses
+  string: "\\('\\w+\\'\\)|'(?:''|[^'])*'", // Matches strings, allowing for escaped single quotes ('')
+  operator: "=>|<=|!=|>=|=|<>|>|<|\\bAND\\b|\\bOR\\b|\\bBETWEEN\\b|\\bIN\\b|\\bNOT IN\\b|\\bLIKE\\b|\\bIS NOT\\b|\\bNOT LIKE\\b|\\bIS\\b", // Matches SQL operators and logical keywords
+  identifier: "[\\w.]+|\"[^\"]+\"|\\[[^\\]]+\\]", // Matches regular identifiers, quoted identifiers ("identifier"), and bracketed identifiers [identifier]
+  paren: "[()]", // Matches standalone parentheses
   comma: "," // Matches commas
 };
 
@@ -45,17 +47,26 @@ class Tokenizer {
       let value = match.groups[type];
 
       // Remove surrounding single quotes from placeholders
-      if (type === "placeholder") value = value.replace(/^['"]|['"]$/g, "");
+      if (type === "placeholder") value = value.replace(/^['"]|['"]$/g, "").replace(" ", "");
 
       if (type === "operator") {
         const lowerValue = value.toLowerCase();
-        
+
         if (lowerValue === "is") {
           value = "=";
         } else if (lowerValue === "is not") {
           value = "!=";
         }
       }
+
+      if (LITERALS.includes(type)){
+        value = value.replace(/^[(]|[)]$/g, "");
+      }
+
+      if (type === "identifier") {
+        value = value.replace(/^["\[]|["\]]$/g, "");
+      }
+      
       
       return { type, value };
     }
@@ -66,7 +77,7 @@ class Tokenizer {
 
   peekNextToken() {
     if (this.index >= this.input.length) return null;
-    
+
     const savedIndex = this.index; // Save current index
     try {
       return this.nextToken(); // Get next token
@@ -78,7 +89,7 @@ class Tokenizer {
   reset() {
     this.index = 0; // Reset index to the beginning of the input
   }
-  
+
 }
 
 export { Tokenizer };

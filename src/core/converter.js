@@ -1,37 +1,31 @@
-const logicalOperators = ['and', 'or'];
+import { LOGICAL_OPERATORS } from "../constants.js";
 
 /**
  * Main conversion function that sets up the global context
- * @param {Object} ast - The abstract syntax tree
- * @param {Array} vars - Array of variable names
- * @param {Object} results - Optional object for placeholder resolution
  * @returns {Array|null} DevExpress format filter
  */
 function DevExpressConverter() {
     // Global variables accessible throughout the converter
     let resultObject = null;
-    let primaryEntity = null;
-    let primaryKey = null;
-    let variables = [];
     const EnableShortCircuit = true;
 
     /**
    * Main conversion function that sets up the global context
    * @param {Object} ast - The abstract syntax tree
-   * @param {Array} vars - Array of variable names
    * @param {Object} ResultObject - Optional object for placeholder resolution
+   * @param {boolean} enableShortCircuit - Optional enabling and disabling the shortcircuit ie evaluating value = value scenario 
    * @returns {Array|null} DevExpress format filter
    */
-    function convert(ast, vars, ResultObject = null) {
+    function convert(ast, ResultObject = null, enableShortCircuit = true) {
         // Set up global context
-        variables = vars;
         resultObject = ResultObject;
+        EnableShortCircuit = enableShortCircuit;
 
         // Process the AST
         let result = processAstNode(ast);
 
         // Handle special cases for short circuit
-        if(result === true || result === false || result === null) return [];
+        if (result === true || result === false || result === null) return [];
 
         return processAstNode(ast);
     }
@@ -111,8 +105,8 @@ function DevExpressConverter() {
 
         // Detect and flatten nested logical expressions
         if (parentOperator === null) {
-            if (left.length === 3 && logicalOperators.includes(left[1])) parentOperator = left[1];
-            if (right.length === 3 && logicalOperators.includes(right[1])) parentOperator = right[1];
+            if (left.length === 3 && LOGICAL_OPERATORS.includes(left[1])) parentOperator = left[1];
+            if (right.length === 3 && LOGICAL_OPERATORS.includes(right[1])) parentOperator = right[1];
         }
 
         // Flatten nested logical expressions if applicable
@@ -136,13 +130,21 @@ function DevExpressConverter() {
         }
 
         // Handle "IN" condition, including comma-separated values
-        if (operator === "IN") {
-            return handleInOperator(ast);
+        if (operator === "IN" || operator === "NOT IN") {
+            return handleInOperator(ast, operator);
         }
 
         const left = ast.left !== undefined ? processAstNode(ast.left) : convertValue(ast.field);
         const right = ast.right !== undefined ? processAstNode(ast.right) : convertValue(ast.value);
-        const comparison = [left, ast.operator.toLowerCase(), right];
+        const operatorToken = ast.operator.toLowerCase();
+
+        let comparison = [left, operatorToken, right];
+
+        if (isFunctionNullCheck(ast.left, true)) {
+            comparison = [[left, operatorToken, right], 'or', [left, operatorToken, null]];
+        } else if (isFunctionNullCheck(ast.right, true)) {
+            comparison = [[left, operatorToken, right], 'or', [right, operatorToken, null]];
+        }
 
         // Apply short-circuit evaluation if enabled
         if (EnableShortCircuit) {
@@ -179,7 +181,7 @@ function DevExpressConverter() {
      * @param {Object} ast - The comparison operator AST node.
      * @returns {Array} DevExpress format filter.
      */
-    function handleInOperator(ast) {
+    function handleInOperator(ast, operator) {
         let resolvedValue = convertValue(ast.value);
 
         // Handle comma-separated values in a string
@@ -190,19 +192,18 @@ function DevExpressConverter() {
             } else {
                 resolvedValue = firstValue;
             }
+        } else if (typeof resolvedValue === 'string' && resolvedValue.includes(',')) {
+            resolvedValue = resolvedValue.split(',').map(v => v.trim());
         }
 
-        if(Array.isArray(resolvedValue) && resolvedValue.length){
+        let operatorToken = operator === "IN" ? '=' : operator === "NOT IN" ? '!=' : operator;
+        let joinOperatorToken = operator === "IN" ? 'or' : operator === "NOT IN" ? 'and' : operator;
 
-            return Array.prototype.concat
-             .apply(
-               [],
-               resolvedValue.map((i) => [[ast.field, '=', i], 'or']),
-             )
-             .slice(0, -1)
+        if (Array.isArray(resolvedValue) && resolvedValue.length) {
+            return resolvedValue.flatMap(i => [[ast.field, operatorToken, i], joinOperatorToken]).slice(0, -1);
         }
 
-        return [ast.field, "in", resolvedValue];
+        return [ast.field, operatorToken, resolvedValue];
     }
 
     /**
@@ -225,7 +226,7 @@ function DevExpressConverter() {
             }
 
             // Special handling for ISNULL function
-            if (val.type === "function" && val.name === "ISNULL" && val.args?.length >= 2) {
+            if (isFunctionNullCheck(val)) {
                 return convertValue(val.args[0]);
             }
 
@@ -259,6 +260,18 @@ function DevExpressConverter() {
     function isNullCheck(node, valueNode) {
         return node?.type === "function" && node.name === "ISNULL" && valueNode?.type === "value";
     }
+
+    /**
+     * Checks if a node is a ISNULL function without value
+     * @param {Object} node 
+     * @returns {boolean} True if this is an ISNULL check.
+     */
+    function isFunctionNullCheck(node, isPlaceholderCheck = false) {
+        const isValidFunction = node?.type === "function" && node?.name === "ISNULL" && node?.args?.length >= 2;
+
+        return isPlaceholderCheck ? isValidFunction && node?.args[0]?.value?.type !== "placeholder" : isValidFunction;
+    }
+
 
     /**
      * Determines whether the logical tree should be flattened.
@@ -329,7 +342,14 @@ function DevExpressConverter() {
      * @returns {boolean|null} The result of the evaluation or null if not evaluable.
      */
     function evaluateExpression(left, operator, right) {
-        if (isNaN(left) || isNaN(right) || left === null || right === null) return null;
+        if ((left !== null && isNaN(left)) || (right !== null && isNaN(right))) return null;
+
+        if (left === null || right === null) {
+            if (operator === '=' || operator === '==') return left === right;
+            if (operator === '<>' || operator === '!=') return left !== right;
+            return null; // Any comparison with null should return null
+        }
+
         switch (operator) {
             case '=': case '==': return left === right;
             case '<>': case '!=': return left !== right;
@@ -337,7 +357,7 @@ function DevExpressConverter() {
             case '>=': return left >= right;
             case '<': return left < right;
             case '<=': return left <= right;
-            default: return false;
+            default: return null; // Invalid operator
         }
     }
 
@@ -351,12 +371,10 @@ const devExpressConverter = DevExpressConverter();
 /**
  * Converts an abstract syntax tree to DevExpress format
  * @param {Object} ast - The abstract syntax tree
- * @param {Array} variables - Array of variable names
  * @param {Object} resultObject - Optional object for placeholder resolution
- * @param {string} primaryEntity - Optional primary entity name
- * @param {string} primaryKey - Optional primary key value
+ * @param {string} enableShortCircuit - Optional enabling and disabling the shortcircuit ie evaluating value = value scenario 
  * @returns {Array|null} DevExpress format filter
  */
-export function convertToDevExpressFormat({ ast, variables, resultObject = null }) {
-    return devExpressConverter.init(ast, variables, resultObject);
+export function convertToDevExpressFormat({ ast, resultObject = null, enableShortCircuit = true }) {
+    return devExpressConverter.init(ast, resultObject,enableShortCircuit);
 }

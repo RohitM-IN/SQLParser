@@ -1,15 +1,6 @@
+import { LITERALS, OPERATOR_PRECEDENCE, UNSUPPORTED_PATTERN } from "../constants.js";
 import { Tokenizer } from "./tokenizer.js";
 
-// Define operator precedence for parsing expressions
-const OPERATOR_PRECEDENCE = {
-	"OR": 1, "AND": 2, "=": 3, "!=": 3, ">": 3, "<": 3, ">=": 3, "<=": 3,
-	"IN": 3, "<>": 3, "LIKE": 3, "IS": 3, "BETWEEN": 3
-};
-
-const LITERALS = ["number", "string", "null"];
-
-// Regular expression to check for unsupported SQL patterns (like SELECT-FROM or JOIN statements)
-const UNSUPPORTED_PATTERN = /\bSELECT\b.*\bFROM\b|\bINNER\s+JOIN\b/i;
 
 export function parse(input, variables = []) {
 
@@ -25,9 +16,9 @@ export function parse(input, variables = []) {
 	// const tokens = [];
 	// let tempToken = currentToken;
 	// while (tempToken) {
-	//   tokens.push(tempToken);
-	//   tempToken = tokenizer.peekNextToken();
-	//   tokenizer.nextToken();
+	// 	tokens.push(tempToken);
+	// 	tempToken = tokenizer.peekNextToken();
+	// 	tokenizer.nextToken();
 	// }
 
 	// console.log("Tokens:", tokens);
@@ -208,8 +199,10 @@ export function parse(input, variables = []) {
 			return { type: "placeholder", value: val };
 		}
 
+		operatorToken = operatorToken.toUpperCase();
+
 		// Handle IN operator which requires a list of values
-		if (operatorToken && operatorToken.toUpperCase() === "IN") return parseInList(token);
+		if (operatorToken && (operatorToken === "IN" || operatorToken === "NOT IN")) return parseInList(token);
 
 		throw new Error(`Unexpected value: ${token.value}`);
 	}
