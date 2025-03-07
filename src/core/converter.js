@@ -7,7 +7,7 @@ import { LOGICAL_OPERATORS } from "../constants.js";
 function DevExpressConverter() {
     // Global variables accessible throughout the converter
     let resultObject = null;
-    const EnableShortCircuit = true;
+    let EnableShortCircuit = true;
 
     /**
    * Main conversion function that sets up the global context
@@ -376,5 +376,5 @@ const devExpressConverter = DevExpressConverter();
  * @returns {Array|null} DevExpress format filter
  */
 export function convertToDevExpressFormat({ ast, resultObject = null, enableShortCircuit = true }) {
-    return devExpressConverter.init(ast, resultObject,enableShortCircuit);
+    return devExpressConverter.init(ast, resultObject, enableShortCircuit);
 }

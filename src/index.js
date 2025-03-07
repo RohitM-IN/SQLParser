@@ -16,8 +16,8 @@ export function convertSQLToAst(filterString, enableConsoleLogs = false) {
     return parsedResult;
 }
 
-export function convertAstToDevextreme(ast, variables, state) {
-    return convertToDevExpressFormat({ ast, variables, resultObject: state })
+export function convertAstToDevextreme(ast, state, enableShortCircuit = true) {
+    return convertToDevExpressFormat({ ast, resultObject: state, enableShortCircuit })
 }
 
 
