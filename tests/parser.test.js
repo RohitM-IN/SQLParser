@@ -185,11 +185,13 @@ describe("Parser SQL to dx Filter Builder", () => {
             ]
         },
         {
-            input: "AddressType IN ('2', ('4'))",
+            input: "AddressType IN ('2', ('4')) OR AddressType =({ServiceOrderDocument .SourceID})",
             expected: [
                 ["AddressType", "=", '2'],
                 "or",
-                ["AddressType", "=", '4']
+                ["AddressType", "=", '4'],
+                "or",
+                ["AddressType", "=", 2]
             ]
         }
     ];
@@ -217,7 +219,7 @@ describe("Parser SQL to dx Filter Builder", () => {
             const variables = astwithVariables.variables;
             const ast = astwithVariables.ast;
 
-            const result = convertAstToDevextreme(ast, variables, sampleData);
+            const result = convertAstToDevextreme(ast, sampleData);
 
             if (result == null || result == true || result == false) {
                 expect([]).toEqual(expected);

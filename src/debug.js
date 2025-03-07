@@ -25,7 +25,7 @@
 //     const astTree = parsedResult.ast;
 //     console.log("AST Tree:", JSON.stringify(astTree, null, 2), "\n");
 
-//     return convertToDevExpressFormat({ ast: astTree, variables: extractedVariables, resultObject: sampleData });
+//     return convertToDevExpressFormat({ ast: astTree, resultObject: sampleData });
 // }
 
 // const devexpress = parseFilterString("OrderID = {CustomerOrders.OrderID} AND Status IN (1, 3)", sampleData);

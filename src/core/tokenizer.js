@@ -6,7 +6,7 @@ const tokenPatterns = {
   function: "\\b(ISNULL)\\b", // Matches function names like ISNULL (case-insensitive)
   null: "\\bNULL\\b|\\(\\s*NULL\\s*\\)", // Matches NULL as a keyword
   number: "\\(\\d+\\)|\\d+", // Matches numbers while stripping unnecessary parentheses
-  placeholder: "'?\\{[^}]+\\}'?", // Matches placeholders like {variable} or '{variable}'
+  placeholder: "\\('?\\{[^}]+\\}'?\\)|'?\\{[^}]+\\}'?", // Matches placeholders like {variable} or '{variable}' or ({variable}) or ('{variable}')
   string: "\\('\\w+\\'\\)|'(?:''|[^'])*'", // Matches strings, allowing for escaped single quotes ('')
   operator: "=>|<=|!=|>=|=|<>|>|<|\\bAND\\b|\\bOR\\b|\\bBETWEEN\\b|\\bIN\\b|\\bNOT IN\\b|\\bLIKE\\b|\\bIS NOT\\b|\\bNOT LIKE\\b|\\bIS\\b", // Matches SQL operators and logical keywords
   identifier: "[\\w.]+|\"[^\"]+\"|\\[[^\\]]+\\]", // Matches regular identifiers, quoted identifiers ("identifier"), and bracketed identifiers [identifier]
@@ -47,7 +47,7 @@ class Tokenizer {
       let value = match.groups[type];
 
       // Remove surrounding single quotes from placeholders
-      if (type === "placeholder") value = value.replace(/^['"]|['"]$/g, "").replace(" ", "");
+      if (type === "placeholder") value = value.replace(/^[\s'"\(\)]+|[\s'"\(\)]+|[\s]+/g, "");
 
       if (type === "operator") {
         const lowerValue = value.toLowerCase();
@@ -59,15 +59,15 @@ class Tokenizer {
         }
       }
 
-      if (LITERALS.includes(type)){
+      if (LITERALS.includes(type)) {
         value = value.replace(/^[(]|[)]$/g, "");
       }
 
       if (type === "identifier") {
         value = value.replace(/^["\[]|["\]]$/g, "");
       }
-      
-      
+
+
       return { type, value };
     }
 
