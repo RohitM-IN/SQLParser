@@ -12,8 +12,8 @@ export interface ParsedResult {
 
 export interface ConvertToDevExpressFormatParams {
     ast: any; // Define a more specific type if possible
-    variables: string[];
     resultObject: StateDataObject;
+    enableShortCircuit?: boolean;
 }
 
 export function sanitizeQuery(filterString: string): SanitizedQuery;
@@ -30,6 +30,6 @@ export function convertSQLToAst(
 
 export function convertAstToDevextreme(
     ast: any, // Define a more specific type if possible
-    variables: string[],
-    state: StateDataObject
+    state: StateDataObject,
+    enableShortCircuit?: boolean,
 ): any;
