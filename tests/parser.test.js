@@ -181,6 +181,14 @@ describe("Parser SQL to dx Filter Builder", () => {
                 "or",
                 ["AddressType", "=", 2]
             ]
+        },
+        {
+            input: "(ISNULL(TicketID, 0) = ISNULL({SupportResolution.TicketID}, 0))",
+            expected: [
+                ["TicketID", "=", 123],
+                "or",
+                ["TicketID", "=", null]
+            ]
         }
     ];
 
@@ -240,5 +248,6 @@ const sampleData = {
     "LeadDocument.BranchID": 42,
     "LeadDocument.CompanyID": 7,
     "ServiceOrderDocument.SourceID": 2,
-    "LeadDocument.AllowSubDealer": true
+    "LeadDocument.AllowSubDealer": true,
+    "SupportResolution.TicketID": 123
 };
