@@ -184,6 +184,8 @@ export function parse(input, variables = []) {
 	function parseValue(operatorToken) {
 		if (!currentToken) throw new Error("Unexpected end of input");
 
+		if(currentToken.type === "function") return parseFunction();
+
 		const token = currentToken;
 		next(); // Move to the next token
 
