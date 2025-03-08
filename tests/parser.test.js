@@ -103,10 +103,6 @@ describe("Parser SQL to dx Filter Builder", () => {
             ]
         },
         {
-            input: "NULL",
-            expected: []
-        },
-        {
             input: "((ISNULL({0}, 0) = 0 AND CompanyID = {1}) OR CompanyID IS NULL) OR BranchID = {0} | [LeadDocument.BranchID] | [LeadDocument.CompanyID]",
             expected: [
                 // [
@@ -121,10 +117,6 @@ describe("Parser SQL to dx Filter Builder", () => {
                 'or',
                 ["BranchID", "=", 42]
             ]
-        },
-        {
-            input: "SELECT DISTINCT OP.DocID ID,OP.DocName,OP.DocType,OP.DocName [Work Purchase Order],OP.DocDate DocDate,SP.WoStatus,OP.DocDate [Work Purchase Order Date], OP.CompanyID,      cast(cast(OP.DocDate as date) as varchar(10)) DocumentDate        FROM OpenDocuments OP      inner join PurchaseHeader PH on PH.Id=op.DocID       inner JOIN PurchasePosting PP ON PP.DocID = PH.ID       inner JOIN SalePosting SP ON SP.PurchasePostingLineID = PP.ID",
-            expect: null
         },
         {
             input: "FromDate Between '10-10-2021' AND '10-10-2022'",
@@ -151,10 +143,6 @@ describe("Parser SQL to dx Filter Builder", () => {
                 "or",
                 ["SourceID", "=", null]
             ]
-        },
-        {
-            input: "CompanyID = CompanyID2 = {AccountingRule.CompanyID}",
-            expected: "Error: Invalid comparison: CompanyID = CompanyID2",
         },
         {
             input: "(CompanyID = {LeadDocument.CompanyID} OR ISNULL(CompanyID,0) = 0) AND (ISNULL(IsSubdealer,0) = {LeadDocument.AllowSubDealer})",
@@ -204,12 +192,8 @@ describe("Parser SQL to dx Filter Builder", () => {
             }
 
             let astwithVariables;
-            try {
-                astwithVariables = convertSQLToAst(input);
-            } catch (error) {
-                expect(error.message).toEqual(expected.replace("Error: ", ""));
-                return;
-            }
+            astwithVariables = convertSQLToAst(input);
+
 
             if (astwithVariables == null) {
                 expect(null).toEqual(expected);

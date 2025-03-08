@@ -199,10 +199,17 @@ export function parse(input, variables = []) {
 			return { type: "placeholder", value: val };
 		}
 
-		operatorToken = operatorToken.toUpperCase();
+		operatorToken = operatorToken?.toUpperCase();
 
 		// Handle IN operator which requires a list of values
 		if (operatorToken && (operatorToken === "IN" || operatorToken === "NOT IN")) return parseInList(token);
+
+		// Handle ({Placeholder}) syntax for placeholders inside parentheses
+		const nextToken = tokenizer.peekNextToken();
+		if(token.type === "paren" && currentToken && currentToken.type === "placeholder" && nextToken && nextToken.type === "paren") {
+			const val = parseValue();
+			return { type: "placeholder", value: val };
+		}
 
 		throw new Error(`Unexpected value: ${token.value}`);
 	}
