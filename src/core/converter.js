@@ -248,7 +248,7 @@ function DevExpressConverter() {
         if (!resultObject) return `{${placeholder}}`;
 
 
-        return resultObject.hasOwnProperty(placeholder) ? resultObject[placeholder] : `{${placeholder.value}}`;
+        return resultObject.hasOwnProperty(placeholder) ? resultObject[placeholder] : `{${placeholder.value ?? placeholder}}`;
     }
 
     /**
