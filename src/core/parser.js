@@ -184,37 +184,57 @@ export function parse(input, variables = []) {
 	function parseValue(operatorToken) {
 		if (!currentToken) throw new Error("Unexpected end of input");
 
-		if(currentToken.type === "function") return parseFunction();
+		// Handle function without consuming the token
+		if (currentToken.type === "function") {
+			return parseFunction();
+		}
 
 		const token = currentToken;
 		next(); // Move to the next token
 
-		if (token.type === "number") return Number(token.value);
-		if (token.type === "string") return token.value.slice(1, -1).replace(/''/g, "");
-		if (token.type === "identifier") return token.value;
-		if (token.type === "null") return null;
+		switch (token.type) {
+			case "number":
+				return Number(token.value);
 
-		// Handle placeholders like `{VariableName}`
-		if (token.type === "placeholder") {
-			const val = token.value.slice(1, -1);
-			if (!variables.includes(val)) variables.push(val);
-			return { type: "placeholder", value: val };
+			case "string":
+				return token.value.slice(1, -1).replace(/''/g, "");
+
+			case "identifier":
+				return token.value;
+
+			case "null":
+				return null;
+
+			case "placeholder": {
+				const val = token.value.slice(1, -1);
+				if (!variables.includes(val)) variables.push(val);
+				return { type: "placeholder", value: val };
+			}
+
+			case "paren": {
+				if (currentToken.type === "function") {
+					return parseFunction();
+				}
+				// Handle ({Placeholder}) syntax for placeholders inside parentheses
+				const nextToken = tokenizer.peekNextToken();
+				if (currentToken && currentToken.type === "placeholder" &&
+					nextToken && nextToken.type === "paren") {
+					const val = parseValue();
+					return { type: "placeholder", value: val };
+				}
+				break;
+			}
 		}
 
+		// Handle IN or NOT IN operator (outside switch as intended)
 		operatorToken = operatorToken?.toUpperCase();
-
-		// Handle IN operator which requires a list of values
-		if (operatorToken && (operatorToken === "IN" || operatorToken === "NOT IN")) return parseInList(token);
-
-		// Handle ({Placeholder}) syntax for placeholders inside parentheses
-		const nextToken = tokenizer.peekNextToken();
-		if(token.type === "paren" && currentToken && currentToken.type === "placeholder" && nextToken && nextToken.type === "paren") {
-			const val = parseValue();
-			return { type: "placeholder", value: val };
+		if (operatorToken === "IN" || operatorToken === "NOT IN") {
+			return parseInList(token);
 		}
 
 		throw new Error(`Unexpected value: ${token.value}`);
 	}
+
 
 
 	// Start parsing and return the AST with extracted variables
