@@ -1,4 +1,4 @@
-import { LITERALS, OPERATOR_PRECEDENCE, UNSUPPORTED_PATTERN } from "../constants.js";
+import { LITERALS, LOGICAL_OPERATORS, OPERATOR_PRECEDENCE, UNSUPPORTED_PATTERN } from "../constants.js";
 import { Tokenizer } from "./tokenizer.js";
 
 
@@ -78,20 +78,20 @@ export function parse(input, variables = []) {
 	}
 
 	function parseFunction() {
-		const funcName = currentToken.value.toUpperCase();
+		const functionName = currentToken.value.toUpperCase();
 		next();
 
-		expectedToken(currentToken, "(", `Expected ( after ${funcName}`);
+		expectedToken(currentToken, "(", `Expected ( after ${functionName}`);
 
 		next();
 
-		const args = [];
+		const functionArgs = [];
 		while (currentToken && currentToken.value !== ")") {
-			args.push(parseExpression());
+			functionArgs.push(parseExpression());
 			if (currentToken && currentToken.value === ",") next();
 		}
 
-		expectedToken(currentToken, ")", `Expected ) after ${funcName}`);
+		expectedToken(currentToken, ")", `Expected ) after ${functionName}`);
 
 		next(); // Consume the closing parenthesis
 
@@ -99,17 +99,22 @@ export function parse(input, variables = []) {
 		if (currentToken && currentToken.type === "operator") {
 			const operator = currentToken.value;
 			next(); // Move to the next token after the operator
-			const value = parseValue(); // Parse the value after the operator
+			const rightOperand = parseValue(); // Parse the value after the operator
+			const nodeType = LOGICAL_OPERATORS.includes(operator.toLowerCase()) ? "logical" : "comparison";
+
+			if(nodeType === "logical") {
+				return { type: "logical", operator, left: { type: "function", name: functionName, args: functionArgs }, right: rightOperand  };
+			}
 
 			return {
 				type: "comparison",
-				left: { type: "function", name: funcName, args },
+				left: { type: "function", name: functionName, args: functionArgs },
 				operator,
-				value
+				value: rightOperand 
 			};
 		}
 
-		return { type: "function", name: funcName, args };
+		return { type: "function", name: functionName, args: functionArgs };
 	}
 
 	// Parses logical expressions using operator precedence
@@ -165,6 +170,21 @@ export function parse(input, variables = []) {
 
 			if (operator === "between") return parseBetweenComparison(field, operator);
 
+			if (currentToken.type === "function") {
+				const functionNode = parseFunction();
+
+				// Wrap the function inside a comparison if it's directly after an operator
+				const leftComparison = {
+					type: "comparison",
+					field,
+					operator,
+					value: functionNode.left
+				};
+			
+				functionNode.left = leftComparison;
+				return functionNode;
+			}
+
 			// For other comparison operators, parse a single right-hand value
 			const valueType = currentToken.type;
 			const value = parseValue(operator);
@@ -184,28 +204,57 @@ export function parse(input, variables = []) {
 	function parseValue(operatorToken) {
 		if (!currentToken) throw new Error("Unexpected end of input");
 
+		// Handle function without consuming the token
+		if (currentToken.type === "function") {
+			return parseFunction();
+		}
+
 		const token = currentToken;
 		next(); // Move to the next token
 
-		if (token.type === "number") return Number(token.value);
-		if (token.type === "string") return token.value.slice(1, -1).replace(/''/g, "");
-		if (token.type === "identifier") return token.value;
-		if (token.type === "null") return null;
+		switch (token.type) {
+			case "number":
+				return Number(token.value);
 
-		// Handle placeholders like `{VariableName}`
-		if (token.type === "placeholder") {
-			const val = token.value.slice(1, -1);
-			if (!variables.includes(val)) variables.push(val);
-			return { type: "placeholder", value: val };
+			case "string":
+				return token.value.slice(1, -1).replace(/''/g, "");
+
+			case "identifier":
+				return token.value;
+
+			case "null":
+				return null;
+
+			case "placeholder": {
+				const val = token.value.slice(1, -1);
+				if (!variables.includes(val)) variables.push(val);
+				return { type: "placeholder", value: val };
+			}
+
+			case "paren": {
+				if (currentToken.type === "function") {
+					return parseFunction();
+				}
+				// Handle ({Placeholder}) syntax for placeholders inside parentheses
+				const nextToken = tokenizer.peekNextToken();
+				if (currentToken && currentToken.type === "placeholder" &&
+					nextToken && nextToken.type === "paren") {
+					const val = parseValue();
+					return { type: "placeholder", value: val };
+				}
+				break;
+			}
 		}
 
-		operatorToken = operatorToken.toUpperCase();
-
-		// Handle IN operator which requires a list of values
-		if (operatorToken && (operatorToken === "IN" || operatorToken === "NOT IN")) return parseInList(token);
+		// Handle IN or NOT IN operator (outside switch as intended)
+		operatorToken = operatorToken?.toUpperCase();
+		if (operatorToken === "IN" || operatorToken === "NOT IN") {
+			return parseInList(token);
+		}
 
 		throw new Error(`Unexpected value: ${token.value}`);
 	}
+
 
 
 	// Start parsing and return the AST with extracted variables
