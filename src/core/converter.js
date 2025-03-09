@@ -140,9 +140,9 @@ function DevExpressConverter() {
 
         let comparison = [left, operatorToken, right];
 
-        if (isFunctionNullCheck(ast.left, true)) {
+        if ((ast.left && isFunctionNullCheck(ast.left, true)) || (ast.value && isFunctionNullCheck(ast.value, false))) {
             comparison = [[left, operatorToken, right], 'or', [left, operatorToken, null]];
-        } else if (isFunctionNullCheck(ast.right, true)) {
+        } else if (ast.right && isFunctionNullCheck(ast.right, true)) {
             comparison = [[left, operatorToken, right], 'or', [right, operatorToken, null]];
         }
 

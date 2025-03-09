@@ -189,6 +189,19 @@ describe("Parser SQL to dx Filter Builder", () => {
                 "or",
                 ["TicketID", "=", null]
             ]
+        },
+        {
+            input: "CompanyID = ISNULL({LeadDocument.CompanyID},0) OR (ISNULL(CompanyID,0) = 0))",
+            expected: [
+                ["CompanyID", "=", 7],
+                "or",
+                ["CompanyID", "=", null],
+                "or",
+                ["CompanyID", "=", 0],
+                "or",
+                ["CompanyID", "=", null]
+                
+            ]
         }
     ];
 
