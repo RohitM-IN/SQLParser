@@ -137,11 +137,11 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 ["SourceID", "=", 2],
                 "or",
-                ["SourceID", "=", null],
+                ["SourceID", "=", null,{ "defaultValue": 0, "type": "ISNULL"}],
                 "or",
                 ["SourceID", "=", 0],
                 "or",
-                ["SourceID", "=", null]
+                ["SourceID", "=", null,{ "defaultValue": 0, "type": "ISNULL"}]
             ]
         },
         {
@@ -153,14 +153,14 @@ describe("Parser SQL to dx Filter Builder", () => {
                     [
                         ["CompanyID", "=", 0],
                         "or",
-                        ["CompanyID", "=", null]
+                        ["CompanyID", "=", null,{ "defaultValue": 0, "type": "ISNULL"}]
                     ]
                 ],
                 "and",
                 [
                     ["IsSubdealer", "=", true],
                     "or",
-                    ["IsSubdealer", "=", null]
+                    ["IsSubdealer", "=", null,{ "defaultValue": 0, "type": "ISNULL"}]
                 ]
             ]
         },
@@ -187,7 +187,7 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 ["TicketID", "=", 123],
                 "or",
-                ["TicketID", "=", null]
+                ["TicketID", "=", null,{ "defaultValue": 0, "type": "ISNULL"}]
             ]
         },
         {
@@ -195,11 +195,13 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 ["CompanyID", "=", 7],
                 "or",
-                ["CompanyID", "=", null],
+                ["CompanyID", "=", null,{ "defaultValue": 0, "type": "ISNULL"}],
                 "or",
                 ["CompanyID", "=", 0],
                 "or",
-                ["CompanyID", "=", null]
+                ["CompanyID", "=", null,{ "defaultValue": 0, "type": "ISNULL"},
+
+                ]
                 
             ]
         }

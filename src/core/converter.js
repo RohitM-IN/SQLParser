@@ -141,9 +141,9 @@ function DevExpressConverter() {
         let comparison = [left, operatorToken, right];
 
         if ((ast.left && isFunctionNullCheck(ast.left, true)) || (ast.value && isFunctionNullCheck(ast.value, false))) {
-            comparison = [[left, operatorToken, right], 'or', [left, operatorToken, null]];
+            comparison = [[left, operatorToken, right], 'or', [left, operatorToken, null, {type: "ISNULL", defaultValue: (ast.left ?? ast.value).args[1]?.value}]];
         } else if (ast.right && isFunctionNullCheck(ast.right, true)) {
-            comparison = [[left, operatorToken, right], 'or', [right, operatorToken, null]];
+            comparison = [[left, operatorToken, right], 'or', [right, operatorToken, null, {type: "ISNULL", defaultValue: ast.right.args[1]?.value}]];
         }
 
         // Apply short-circuit evaluation if enabled
@@ -322,7 +322,7 @@ function DevExpressConverter() {
      * @returns {boolean} True if the condition is always true.
      */
     function isAlwaysTrue(condition) {
-        return Array.isArray(condition) && condition.length === 3 && evaluateExpression(...condition) == true;
+        return Array.isArray(condition) && condition.length >= 3 && evaluateExpression(...condition) == true;
     }
 
     /**
@@ -331,7 +331,7 @@ function DevExpressConverter() {
      * @returns {boolean} True if the condition is always false.
      */
     function isAlwaysFalse(condition) {
-        return Array.isArray(condition) && condition.length === 3 && evaluateExpression(...condition) == false;
+        return Array.isArray(condition) && condition.length >= 3 && evaluateExpression(...condition) == false;
     }
 
     /**
