@@ -12,7 +12,7 @@ export interface ParsedResult {
 
 export interface ConvertToDevExpressFormatParams {
     ast: any; // Define a more specific type if possible
-    resultObject: StateDataObject;
+    resultObject?: StateDataObject | null;
     enableShortCircuit?: boolean;
 }
 
@@ -30,6 +30,6 @@ export function convertSQLToAst(
 
 export function convertAstToDevextreme(
     ast: any, // Define a more specific type if possible
-    state: StateDataObject,
+    state?: StateDataObject | null,
     enableShortCircuit?: boolean,
 ): any;

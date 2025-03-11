@@ -126,6 +126,14 @@ console.log("DevExpress Filter:", JSON.stringify(devexpressFilter, null, 2));
   const devexpressFilter = convertAstToDevextreme(ast, sampleState, false); // Disables short-circuiting
   ```
 
+### **DevExtreme with React Example**
+
+To see an example of how to use `sqlparser-devexpress` with DevExtreme DataGrid in React, check out the live example on CodeSandbox:
+
+[DevExtreme DataGrid with SQL Filter Example](https://codesandbox.io/p/sandbox/with-data-grid-with-sql-as-filter-string-my64v2)
+
+In this example, SQL `WHERE` clauses are parsed into an Abstract Syntax Tree (AST) and then transformed into a DevExpress-compatible filter format that is used directly in the DataGrid component for filtering data. 
+
 ## Roadmap
 
 - Support for additional SQL operators and functions.

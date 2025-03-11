@@ -173,6 +173,15 @@ export function parse(input, variables = []) {
 			if (currentToken.type === "function") {
 				const functionNode = parseFunction();
 
+				if(fieldType === "identifier" && functionNode.type === "function") {
+					return {
+						type: "comparison",
+						field,
+						operator,
+						value: functionNode
+					}
+				}
+
 				// Wrap the function inside a comparison if it's directly after an operator
 				const leftComparison = {
 					type: "comparison",

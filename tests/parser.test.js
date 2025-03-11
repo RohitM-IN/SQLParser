@@ -204,6 +204,14 @@ describe("Parser SQL to dx Filter Builder", () => {
                 ]
                 
             ]
+        },
+        {
+            input: "CompanyName like '{LeadDocument.CompanyID}' AND BranchName not like '{LeadDocument.BranchID}'",
+            expected: [
+                ["CompanyName", "contains", "7"],
+                "and",
+                ["BranchName", "notcontains", "42"]
+            ]
         }
     ];
 

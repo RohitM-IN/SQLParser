@@ -136,7 +136,13 @@ function DevExpressConverter() {
 
         const left = ast.left !== undefined ? processAstNode(ast.left) : convertValue(ast.field);
         const right = ast.right !== undefined ? processAstNode(ast.right) : convertValue(ast.value);
-        const operatorToken = ast.operator.toLowerCase();
+        let operatorToken = ast.operator.toLowerCase();
+
+        if(operatorToken === "like") {
+            operatorToken = "contains";
+        }else if (operatorToken === "not like") {
+            operatorToken = "notcontains";
+        }
 
         let comparison = [left, operatorToken, right];
 
