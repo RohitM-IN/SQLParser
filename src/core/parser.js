@@ -237,7 +237,7 @@ export function parse(input, variables = []) {
 			case "placeholder": {
 				const val = token.value.slice(1, -1);
 				if (!variables.includes(val)) variables.push(val);
-				return { type: "placeholder", value: val };
+				return {  ...token ,type: "placeholder", value: val };
 			}
 
 			case "paren": {

@@ -45,8 +45,17 @@ class Tokenizer {
       if (!type || type === "whitespace") return this.nextToken();
 
       let value = match.groups[type];
+      let dataType = null;
 
       // Remove surrounding single quotes from placeholders
+      if(type === "placeholder"){
+
+        if(value.startsWith("'") && value.endsWith("'")){
+          dataType = "string";
+        }
+
+        value = value.replace(/^[\s'"\(\)]+|[\s'"\(\)]+|[\s]+/g, "");
+      }
       if (type === "placeholder") value = value.replace(/^[\s'"\(\)]+|[\s'"\(\)]+|[\s]+/g, "");
 
       if (type === "operator") {
@@ -68,7 +77,7 @@ class Tokenizer {
       }
 
 
-      return { type, value };
+      return { type, value, ...(dataType !== null && { dataType }) };
     }
 
     // If no valid token is found, throw an error with the remaining input for debugging

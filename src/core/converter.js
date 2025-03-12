@@ -228,7 +228,13 @@ function DevExpressConverter() {
         // Handle object-based values
         if (typeof val === "object") {
             if (val.type === "placeholder") {
-                return resolvePlaceholderFromResultObject(val.value);
+                const placeholderValue = resolvePlaceholderFromResultObject(val.value);
+                
+                if(val?.dataType === "string"){
+                    return placeholderValue?.toString();
+                }
+
+                return placeholderValue;
             }
 
             // Special handling for ISNULL function
