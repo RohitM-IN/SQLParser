@@ -138,18 +138,19 @@ function DevExpressConverter() {
         const right = ast.right !== undefined ? processAstNode(ast.right) : convertValue(ast.value);
         let operatorToken = ast.operator.toLowerCase();
 
-        if(operatorToken === "like") {
+        if (operatorToken === "like") {
             operatorToken = "contains";
-        }else if (operatorToken === "not like") {
+        } else if (operatorToken === "not like") {
             operatorToken = "notcontains";
         }
 
         let comparison = [left, operatorToken, right];
 
+        //TODO: the ISNULL custom metadata is causing issues on filters will need to check this on server
         if ((ast.left && isFunctionNullCheck(ast.left, true)) || (ast.value && isFunctionNullCheck(ast.value, false))) {
-            comparison = [[left, operatorToken, right], 'or', [left, operatorToken, null, {type: "ISNULL", defaultValue: (ast.left ?? ast.value).args[1]?.value}]];
+            comparison = [[left, operatorToken, right], 'or', [left, operatorToken, null,]];// {type: "ISNULL", defaultValue: (ast.left ?? ast.value).args[1]?.value}]]; 
         } else if (ast.right && isFunctionNullCheck(ast.right, true)) {
-            comparison = [[left, operatorToken, right], 'or', [right, operatorToken, null, {type: "ISNULL", defaultValue: ast.right.args[1]?.value}]];
+            comparison = [[left, operatorToken, right], 'or', [right, operatorToken, null,]];// {type: "ISNULL", defaultValue: ast.right.args[1]?.value}]];
         }
 
         // Apply short-circuit evaluation if enabled
@@ -229,8 +230,8 @@ function DevExpressConverter() {
         if (typeof val === "object") {
             if (val.type === "placeholder") {
                 const placeholderValue = resolvePlaceholderFromResultObject(val.value);
-                
-                if(val?.dataType === "string"){
+
+                if (val?.dataType === "string") {
                     return placeholderValue?.toString();
                 }
 
