@@ -146,11 +146,11 @@ function DevExpressConverter() {
 
         let comparison = [left, operatorToken, right];
 
-        //TODO: the ISNULL custom metadata is causing issues on filters will need to check this on server
+        // Last null because of special case when using dropdown it https://github.com/DevExpress/DevExtreme/blob/25_1/packages/devextreme/js/__internal/data/m_utils.ts#L18 it takes last value as null
         if ((ast.left && isFunctionNullCheck(ast.left, true)) || (ast.value && isFunctionNullCheck(ast.value, false))) {
-            comparison = [[left, operatorToken, right], 'or', [left, operatorToken, null,]];// {type: "ISNULL", defaultValue: (ast.left ?? ast.value).args[1]?.value}]]; 
+            comparison = [[left, operatorToken, right], 'or', [left, operatorToken, null, { type: "ISNULL", defaultValue: (ast.left ?? ast.value).args[1]?.value }, null]];
         } else if (ast.right && isFunctionNullCheck(ast.right, true)) {
-            comparison = [[left, operatorToken, right], 'or', [right, operatorToken, null,]];// {type: "ISNULL", defaultValue: ast.right.args[1]?.value}]];
+            comparison = [[left, operatorToken, right], 'or', [right, operatorToken, null, { type: "ISNULL", defaultValue: ast.right.args[1]?.value }, null]];
         }
 
         // Apply short-circuit evaluation if enabled

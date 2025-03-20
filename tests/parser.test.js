@@ -137,11 +137,11 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 ["SourceID", "=", 2],
                 "or",
-                ["SourceID", "=", null,{ "defaultValue": 0, "type": "ISNULL"}],
+                ["SourceID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null],
                 "or",
                 ["SourceID", "=", 0],
                 "or",
-                ["SourceID", "=", null,{ "defaultValue": 0, "type": "ISNULL"}]
+                ["SourceID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null]
             ]
         },
         {
@@ -153,14 +153,14 @@ describe("Parser SQL to dx Filter Builder", () => {
                     [
                         ["CompanyID", "=", 0],
                         "or",
-                        ["CompanyID", "=", null,{ "defaultValue": 0, "type": "ISNULL"}]
+                        ["CompanyID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null]
                     ]
                 ],
                 "and",
                 [
                     ["IsSubdealer", "=", true],
                     "or",
-                    ["IsSubdealer", "=", null,{ "defaultValue": 0, "type": "ISNULL"}]
+                    ["IsSubdealer", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null]
                 ]
             ]
         },
@@ -187,7 +187,7 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 ["TicketID", "=", 123],
                 "or",
-                ["TicketID", "=", null,{ "defaultValue": 0, "type": "ISNULL"}]
+                ["TicketID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null]
             ]
         },
         {
@@ -195,14 +195,12 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 ["CompanyID", "=", 7],
                 "or",
-                ["CompanyID", "=", null,{ "defaultValue": 0, "type": "ISNULL"}],
+                ["CompanyID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null],
                 "or",
                 ["CompanyID", "=", 0],
                 "or",
-                ["CompanyID", "=", null,{ "defaultValue": 0, "type": "ISNULL"},
+                ["CompanyID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null]
 
-                ]
-                
             ]
         },
         {
