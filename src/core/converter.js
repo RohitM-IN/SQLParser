@@ -135,27 +135,30 @@ function DevExpressConverter() {
         }
 
         const left = ast.left !== undefined ? processAstNode(ast.left) : convertValue(ast.field);
+        const leftDefault = ast.left?.args[1]?.value;
         const right = ast.right !== undefined ? processAstNode(ast.right) : convertValue(ast.value);
+        const rightDefault = ast.right?.args[1]?.value;
         let operatorToken = ast.operator.toLowerCase();
 
-        if(operatorToken === "like") {
+        if (operatorToken === "like") {
             operatorToken = "contains";
-        }else if (operatorToken === "not like") {
+        } else if (operatorToken === "not like") {
             operatorToken = "notcontains";
         }
 
         let comparison = [left, operatorToken, right];
 
+        // Last null because of special case when using dropdown it https://github.com/DevExpress/DevExtreme/blob/25_1/packages/devextreme/js/__internal/data/m_utils.ts#L18 it takes last value as null
         if ((ast.left && isFunctionNullCheck(ast.left, true)) || (ast.value && isFunctionNullCheck(ast.value, false))) {
-            comparison = [[left, operatorToken, right], 'or', [left, operatorToken, null, {type: "ISNULL", defaultValue: (ast.left ?? ast.value).args[1]?.value}]];
+            comparison = [[left, operatorToken, right], 'or', [left, operatorToken, null, { type: "ISNULL", defaultValue: (ast.left ?? ast.value).args[1]?.value }, null]];
         } else if (ast.right && isFunctionNullCheck(ast.right, true)) {
-            comparison = [[left, operatorToken, right], 'or', [right, operatorToken, null, {type: "ISNULL", defaultValue: ast.right.args[1]?.value}]];
+            comparison = [[left, operatorToken, right], 'or', [right, operatorToken, null, { type: "ISNULL", defaultValue: ast.right.args[1]?.value }, null]];
         }
 
         // Apply short-circuit evaluation if enabled
         if (EnableShortCircuit) {
-            if (isAlwaysTrue(comparison)) return true;
-            if (isAlwaysFalse(comparison)) return false;
+            if (isAlwaysTrue(comparison, leftDefault, rightDefault)) return true;
+            if (isAlwaysFalse(comparison, leftDefault, rightDefault)) return false;
         }
 
         return comparison;
@@ -229,8 +232,8 @@ function DevExpressConverter() {
         if (typeof val === "object") {
             if (val.type === "placeholder") {
                 const placeholderValue = resolvePlaceholderFromResultObject(val.value);
-                
-                if(val?.dataType === "string"){
+
+                if (val?.dataType === "string") {
                     return placeholderValue?.toString();
                 }
 
@@ -331,19 +334,23 @@ function DevExpressConverter() {
     /**
      * Checks if a condition is always true.
      * @param {Array} condition - The condition to check.
+     * @param {*} leftDefault - The default value for the left operand.
+     * @param {*} rightDefault - The default value for the right operand. 
      * @returns {boolean} True if the condition is always true.
      */
-    function isAlwaysTrue(condition) {
-        return Array.isArray(condition) && condition.length >= 3 && evaluateExpression(...condition) == true;
+    function isAlwaysTrue(condition, leftDefault, rightDefault) {
+        return Array.isArray(condition) && condition.length >= 3 && evaluateExpression(...condition, leftDefault, rightDefault) == true;
     }
 
     /**
      * Checks if a condition is always false.
      * @param {Array} condition - The condition to check.
+     * @param {*} leftDefault - The default value for the left operand.
+     * @param {*} rightDefault - The default value for the right operand. 
      * @returns {boolean} True if the condition is always false.
      */
-    function isAlwaysFalse(condition) {
-        return Array.isArray(condition) && condition.length >= 3 && evaluateExpression(...condition) == false;
+    function isAlwaysFalse(condition, leftDefault, rightDefault) {
+        return Array.isArray(condition) && condition.length >= 3 && evaluateExpression(...condition, leftDefault, rightDefault) == false;
     }
 
     /**
@@ -351,9 +358,14 @@ function DevExpressConverter() {
      * @param {*} left - The left operand.
      * @param {string} operator - The operator.
      * @param {*} right - The right operand.
+     * @param {*} leftDefault - The default value for the left operand.
+     * @param {*} rightDefault - The default value for the right
      * @returns {boolean|null} The result of the evaluation or null if not evaluable.
      */
-    function evaluateExpression(left, operator, right) {
+    function evaluateExpression(left, operator, right, leftDefault, rightDefault) {
+        if (left == null && leftDefault != undefined) left = leftDefault;
+        if (right == null && rightDefault != undefined) right = rightDefault;
+
         if ((left !== null && isNaN(left)) || (right !== null && isNaN(right))) return null;
 
         if (left === null || right === null) {

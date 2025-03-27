@@ -137,11 +137,11 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 ["SourceID", "=", 2],
                 "or",
-                ["SourceID", "=", null,{ "defaultValue": 0, "type": "ISNULL"}],
+                ["SourceID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null],
                 "or",
                 ["SourceID", "=", 0],
                 "or",
-                ["SourceID", "=", null,{ "defaultValue": 0, "type": "ISNULL"}]
+                ["SourceID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null]
             ]
         },
         {
@@ -153,14 +153,14 @@ describe("Parser SQL to dx Filter Builder", () => {
                     [
                         ["CompanyID", "=", 0],
                         "or",
-                        ["CompanyID", "=", null,{ "defaultValue": 0, "type": "ISNULL"}]
+                        ["CompanyID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null]
                     ]
                 ],
                 "and",
                 [
                     ["IsSubdealer", "=", true],
                     "or",
-                    ["IsSubdealer", "=", null,{ "defaultValue": 0, "type": "ISNULL"}]
+                    ["IsSubdealer", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null]
                 ]
             ]
         },
@@ -187,7 +187,7 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 ["TicketID", "=", 123],
                 "or",
-                ["TicketID", "=", null,{ "defaultValue": 0, "type": "ISNULL"}]
+                ["TicketID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null]
             ]
         },
         {
@@ -195,14 +195,12 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 ["CompanyID", "=", 7],
                 "or",
-                ["CompanyID", "=", null,{ "defaultValue": 0, "type": "ISNULL"}],
+                ["CompanyID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null],
                 "or",
                 ["CompanyID", "=", 0],
                 "or",
-                ["CompanyID", "=", null,{ "defaultValue": 0, "type": "ISNULL"},
+                ["CompanyID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null]
 
-                ]
-                
             ]
         },
         {
@@ -212,6 +210,10 @@ describe("Parser SQL to dx Filter Builder", () => {
                 "and",
                 ["BranchName", "notcontains", "42"]
             ]
+        },
+        {
+            input: "(RS2ID in ({SaleOrderStatusStmtGlobalRpt.StateID}) Or (ISNULL({SaleOrderStatusStmtGlobalRpt.StateID},0) =0)) And (RS3ID  in (0,{SaleOrderStatusStmtGlobalRpt.RegionID}) Or ISNULL({SaleOrderStatusStmtGlobalRpt.RegionID},0) =0 )",
+            expected: []
         }
     ];
 
@@ -272,5 +274,7 @@ const sampleData = {
     "LeadDocument.CompanyID": 7,
     "ServiceOrderDocument.SourceID": 2,
     "LeadDocument.AllowSubDealer": true,
-    "SupportResolution.TicketID": 123
+    "SupportResolution.TicketID": 123,
+    "SaleOrderStatusStmtGlobalRpt.StateID": null,
+    "SaleOrderStatusStmtGlobalRpt.RegionID": null,
 };
