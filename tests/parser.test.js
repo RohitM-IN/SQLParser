@@ -210,6 +210,10 @@ describe("Parser SQL to dx Filter Builder", () => {
                 "and",
                 ["BranchName", "notcontains", "42"]
             ]
+        },
+        {
+            input: "(RS2ID in ({SaleOrderStatusStmtGlobalRpt.StateID}) Or (ISNULL({SaleOrderStatusStmtGlobalRpt.StateID},0) =0)) And (RS3ID  in (0,{SaleOrderStatusStmtGlobalRpt.RegionID}) Or ISNULL({SaleOrderStatusStmtGlobalRpt.RegionID},0) =0 )",
+            expected: []
         }
     ];
 
@@ -270,5 +274,7 @@ const sampleData = {
     "LeadDocument.CompanyID": 7,
     "ServiceOrderDocument.SourceID": 2,
     "LeadDocument.AllowSubDealer": true,
-    "SupportResolution.TicketID": 123
+    "SupportResolution.TicketID": 123,
+    "SaleOrderStatusStmtGlobalRpt.StateID": null,
+    "SaleOrderStatusStmtGlobalRpt.RegionID": null,
 };
