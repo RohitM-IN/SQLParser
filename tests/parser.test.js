@@ -216,12 +216,11 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: []
         },
         {
-            input: "0 IN ('1,2')",
+            input: "ID IN ('1,2') AND 0 IN ('0,2')",
             expected: [
-                [0, "=", "1"],
+                ["ID", "=", "1"],
                 "or",
-                [0, "=", "2"]
-
+                ["ID", "=", "2"]
             ]
         }
     ];

@@ -206,6 +206,24 @@ function DevExpressConverter() {
             resolvedValue = resolvedValue.split(',').map(v => v.trim());
         }
 
+        // handle short circuit evaluation for IN operator
+        if (EnableShortCircuit && ast.field?.type === "value" && ast.value?.type === "value") {
+            const fieldVal = convertValue(ast.field);
+            if (Array.isArray(resolvedValue)) {
+                // normalize numeric strings if LHS is number
+                const list = resolvedValue.map(x =>
+                    (typeof x === "string" && !isNaN(x) && typeof fieldVal === "number")
+                        ? Number(x)
+                        : x
+                );
+
+                if (operator === "IN")
+                    return list.includes(fieldVal);
+                else if (operator === "NOT IN")
+                    return !list.includes(fieldVal);
+            }
+        }
+
         let operatorToken = operator === "IN" ? '=' : operator === "NOT IN" ? '!=' : operator;
         let joinOperatorToken = operator === "IN" ? 'or' : operator === "NOT IN" ? 'and' : operator;
         let field = convertValue(ast.field);
