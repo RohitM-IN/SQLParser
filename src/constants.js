@@ -11,3 +11,5 @@ export const OPERATOR_PRECEDENCE = {
 export const UNSUPPORTED_PATTERN = /\bSELECT\b.*\bFROM\b|\bINNER\s+JOIN\b/i;
 
 export const LOGICAL_OPERATORS = ['and', 'or'];
+
+export const LITERAL_TYPES = ["value", "placeholder"];

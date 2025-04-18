@@ -1,4 +1,4 @@
-import { LOGICAL_OPERATORS } from "../constants.js";
+import { LITERAL_TYPES, LOGICAL_OPERATORS } from "../constants.js";
 
 /**
  * Main conversion function that sets up the global context
@@ -207,7 +207,7 @@ function DevExpressConverter() {
         }
 
         // handle short circuit evaluation for IN operator
-        if (EnableShortCircuit && ast.field?.type === "value" && ast.value?.type === "value") {
+        if (EnableShortCircuit && (LITERAL_TYPES.includes(ast.field?.type) && LITERAL_TYPES.includes(ast.value?.type))) {
             const fieldVal = convertValue(ast.field);
             if (Array.isArray(resolvedValue)) {
                 // normalize numeric strings if LHS is number
