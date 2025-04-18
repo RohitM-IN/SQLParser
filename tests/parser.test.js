@@ -216,11 +216,11 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: []
         },
         {
-            input: "ID IN ('1,2') AND 0 IN ('0,2')",
+            input: "ID IN ({WorkOrderLine.CompanyIDs}) AND 0 IN ({WorkOrderLine.CompanyIDs})",
             expected: [
-                ["ID", "=", "1"],
+                ["ID", "=", "0"],
                 "or",
-                ["ID", "=", "2"]
+                ["ID", "=", "1"]
             ]
         }
     ];
@@ -285,4 +285,5 @@ const sampleData = {
     "SupportResolution.TicketID": 123,
     "SaleOrderStatusStmtGlobalRpt.StateID": null,
     "SaleOrderStatusStmtGlobalRpt.RegionID": null,
+    "WorkOrderLine.CompanyIDs": ["0,1"],
 };

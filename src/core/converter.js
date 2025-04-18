@@ -221,6 +221,16 @@ function DevExpressConverter() {
                     return list.includes(fieldVal);
                 else if (operator === "NOT IN")
                     return !list.includes(fieldVal);
+            } else if (!Array.isArray(resolvedValue)) {
+                // normalize numeric strings if LHS is number
+                const value = (typeof resolvedValue === "string" && !isNaN(resolvedValue) && typeof fieldVal === "number")
+                    ? Number(resolvedValue)
+                    : resolvedValue;
+
+                if (operator === "IN")
+                    return fieldVal == value;
+                else if (operator === "NOT IN")
+                    return fieldVal != value;
             }
         }
 
