@@ -214,6 +214,15 @@ describe("Parser SQL to dx Filter Builder", () => {
         {
             input: "(RS2ID in ({SaleOrderStatusStmtGlobalRpt.StateID}) Or (ISNULL({SaleOrderStatusStmtGlobalRpt.StateID},0) =0)) And (RS3ID  in (0,{SaleOrderStatusStmtGlobalRpt.RegionID}) Or ISNULL({SaleOrderStatusStmtGlobalRpt.RegionID},0) =0 )",
             expected: []
+        },
+        {
+            input: "0 IN ('1,2')",
+            expected: [
+                [0, "=", "1"],
+                "or",
+                [0, "=", "2"]
+
+            ]
         }
     ];
 

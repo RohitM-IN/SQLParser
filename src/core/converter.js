@@ -48,7 +48,7 @@ function DevExpressConverter() {
                 return handleFunction(ast);
             case "field":
             case "value":
-                return convertValue(ast.value);
+                return convertValue(ast.value, parentOperator);
             default:
                 return null;
         }
@@ -113,6 +113,7 @@ function DevExpressConverter() {
         if (shouldFlattenLogicalTree(parentOperator, operator, ast)) {
             return flattenLogicalTree(left, operator, right);
         }
+
         return [left, operator, right];
     }
 
@@ -207,20 +208,21 @@ function DevExpressConverter() {
 
         let operatorToken = operator === "IN" ? '=' : operator === "NOT IN" ? '!=' : operator;
         let joinOperatorToken = operator === "IN" ? 'or' : operator === "NOT IN" ? 'and' : operator;
-
+        let field = convertValue(ast.field);
         if (Array.isArray(resolvedValue) && resolvedValue.length) {
-            return resolvedValue.flatMap(i => [[ast.field, operatorToken, i], joinOperatorToken]).slice(0, -1);
+            return resolvedValue.flatMap(i => [[field, operatorToken, i], joinOperatorToken]).slice(0, -1);
         }
 
-        return [ast.field, operatorToken, resolvedValue];
+        return [field, operatorToken, resolvedValue];
     }
 
     /**
      * Converts a single value, resolving placeholders and handling special cases.
      * @param {*} val - The value to convert.
+     * @param {string} parentOperator - The operator of the parent logical node (if any).
      * @returns {*} Converted value.
      */
-    function convertValue(val) {
+    function convertValue(val, parentOperator = null) {
         if (val === null) return null;
 
         // Handle array values
@@ -249,6 +251,10 @@ function DevExpressConverter() {
             if (val.type) {
                 return processAstNode(val);
             }
+        }
+
+        if (parentOperator && parentOperator.toUpperCase() === "IN" && typeof val === "string") {
+            return val.split(',').map(v => v.trim());
         }
 
         return val;
