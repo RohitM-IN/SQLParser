@@ -76,13 +76,13 @@ describe("Parser SQL to dx Filter Builder", () => {
                         ["ToDate", ">=", "2022-01-01"]
                     ],
                     'or',
-                    ["ToDate", "=", null]
+                    ["ToDate", "=", null, { "type": "IS" }, null]
                 ],
                 "and",
                 [
                     ["BranchID", "=", 42],
                     "or",
-                    ["RefBranchID", "=", null]
+                    ["RefBranchID", "=", null, { "type": "IS" }, null]
                 ],
                 "and",
                 [
@@ -90,7 +90,7 @@ describe("Parser SQL to dx Filter Builder", () => {
                     // "or",
                     // [7,"=",0],
                     "or",
-                    ["CompanyID", "=", null]
+                    ["CompanyID", "=", null, { "type": "IS" }, null]
                 ]
             ]
         },
@@ -112,7 +112,7 @@ describe("Parser SQL to dx Filter Builder", () => {
                 ["CompanyID", "=", 7],
                 // ],
                 "or",
-                ["CompanyID", "=", null],
+                ["CompanyID", "=", null, { "type": "IS" }, null],
                 // ],
                 'or',
                 ["BranchID", "=", 42]
@@ -127,9 +127,9 @@ describe("Parser SQL to dx Filter Builder", () => {
         {
             input: "BranchID is Null OR BranchID is not 12",
             expected: [
-                ["BranchID", "=", null],
+                ["BranchID", "=", null, { "type": "IS" }, null],
                 "or",
-                ["BranchID", "!=", 12]
+                ["BranchID", "!=", 12, { "type": "IS NOT" }, 12]
             ]
         },
         {
@@ -221,6 +221,16 @@ describe("Parser SQL to dx Filter Builder", () => {
                 ["ID", "=", "0"],
                 "or",
                 ["ID", "=", "1"]
+            ]
+        },
+        {
+            input: "CompanyID is null OR CompanyID is 7 OR CompanyID is not 8",
+            expected: [
+                ["CompanyID", "=", null, { "type": "IS" }, null],
+                "or",
+                ["CompanyID", "=", 7, { "type": "IS" }, 7],
+                "or",
+                ["CompanyID", "!=", 8, { "type": "IS NOT" }, 8]
             ]
         }
     ];

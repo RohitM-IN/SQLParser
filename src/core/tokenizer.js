@@ -45,12 +45,13 @@ class Tokenizer {
       if (!type || type === "whitespace") return this.nextToken();
 
       let value = match.groups[type];
+      const originalValue = value; // Store the original value for debugging
       let dataType = null;
 
       // Remove surrounding single quotes from placeholders
-      if(type === "placeholder"){
+      if (type === "placeholder") {
 
-        if(value.startsWith("'") && value.endsWith("'")){
+        if (value.startsWith("'") && value.endsWith("'")) {
           dataType = "string";
         }
 
@@ -77,7 +78,7 @@ class Tokenizer {
       }
 
 
-      return { type, value, ...(dataType !== null && { dataType }) };
+      return { type, value, originalValue, ...(dataType !== null && { dataType }) };
     }
 
     // If no valid token is found, throw an error with the remaining input for debugging

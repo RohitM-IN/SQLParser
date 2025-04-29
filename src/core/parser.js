@@ -178,6 +178,7 @@ export function parse(input, variables = []) {
 		// Check if it's part of a comparison expression
 		if (currentToken && currentToken.type === "operator") {
 			const operator = currentToken.value.toLowerCase();
+			const originalOperator = currentToken.originalValue;
 			next();
 
 			if (operator === "between") return parseBetweenComparison(field, operator);
@@ -190,7 +191,8 @@ export function parse(input, variables = []) {
 						type: "comparison",
 						field,
 						operator,
-						value: functionNode
+						value: functionNode,
+						originalOperator
 					}
 				}
 
@@ -199,7 +201,8 @@ export function parse(input, variables = []) {
 					type: "comparison",
 					field,
 					operator,
-					value: functionNode.left
+					value: functionNode.left,
+					originalOperator
 				};
 
 				functionNode.left = leftComparison;
@@ -215,7 +218,7 @@ export function parse(input, variables = []) {
 				throw new Error(`Invalid comparison: ${field} ${operator} ${value}`);
 			}
 
-			return { type: "comparison", field, operator, value };
+			return { type: "comparison", field, operator, value, originalOperator };
 		}
 
 		return { type: "field", value: field };

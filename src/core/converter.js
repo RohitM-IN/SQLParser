@@ -124,10 +124,11 @@ function DevExpressConverter() {
      */
     function handleComparisonOperator(ast) {
         const operator = ast.operator.toUpperCase();
+        const originalOperator = ast.originalOperator?.toUpperCase();
 
         // Handle "IS NULL" condition
-        if (operator === "IS" && ast.value === null) {
-            return [ast.field, "=", null];
+        if ((operator === "IS" || originalOperator === "IS") && ast.value === null) {
+            return [ast.field, "=", null, { type: originalOperator }, null];
         }
 
         // Handle "IN" condition, including comma-separated values
@@ -140,14 +141,21 @@ function DevExpressConverter() {
         const right = ast.right !== undefined ? processAstNode(ast.right) : convertValue(ast.value);
         const rightDefault = ast.right?.args[1]?.value;
         let operatorToken = ast.operator.toLowerCase();
+        let includeExtradata = false;
 
         if (operatorToken === "like") {
             operatorToken = "contains";
         } else if (operatorToken === "not like") {
             operatorToken = "notcontains";
+        } else if (operatorToken === "=" && originalOperator === "IS") {
+            includeExtradata = true
+        } else if (operatorToken == "!=" && originalOperator === "IS NOT") {
+            operatorToken = "!=";
+            includeExtradata = true;
         }
-
         let comparison = [left, operatorToken, right];
+        if (includeExtradata)
+            comparison = [left, operatorToken, right, { type: originalOperator }, right];
 
         // Last null because of special case when using dropdown it https://github.com/DevExpress/DevExtreme/blob/25_1/packages/devextreme/js/__internal/data/m_utils.ts#L18 it takes last value as null
         if ((ast.left && isFunctionNullCheck(ast.left, true)) || (ast.value && isFunctionNullCheck(ast.value, false))) {
