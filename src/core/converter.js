@@ -1,4 +1,4 @@
-import { LOGICAL_OPERATORS } from "../constants.js";
+import { LITERAL_TYPES, LOGICAL_OPERATORS } from "../constants.js";
 
 /**
  * Main conversion function that sets up the global context
@@ -48,7 +48,7 @@ function DevExpressConverter() {
                 return handleFunction(ast);
             case "field":
             case "value":
-                return convertValue(ast.value);
+                return convertValue(ast.value, parentOperator);
             default:
                 return null;
         }
@@ -113,6 +113,7 @@ function DevExpressConverter() {
         if (shouldFlattenLogicalTree(parentOperator, operator, ast)) {
             return flattenLogicalTree(left, operator, right);
         }
+
         return [left, operator, right];
     }
 
@@ -123,10 +124,11 @@ function DevExpressConverter() {
      */
     function handleComparisonOperator(ast) {
         const operator = ast.operator.toUpperCase();
+        const originalOperator = ast.originalOperator?.toUpperCase();
 
         // Handle "IS NULL" condition
-        if (operator === "IS" && ast.value === null) {
-            return [ast.field, "=", null];
+        if ((operator === "IS" || originalOperator === "IS") && ast.value === null) {
+            return [ast.field, "=", null, { type: originalOperator }, null];
         }
 
         // Handle "IN" condition, including comma-separated values
@@ -139,14 +141,21 @@ function DevExpressConverter() {
         const right = ast.right !== undefined ? processAstNode(ast.right) : convertValue(ast.value);
         const rightDefault = ast.right?.args[1]?.value;
         let operatorToken = ast.operator.toLowerCase();
+        let includeExtradata = false;
 
         if (operatorToken === "like") {
             operatorToken = "contains";
         } else if (operatorToken === "not like") {
             operatorToken = "notcontains";
+        } else if (operatorToken === "=" && originalOperator === "IS") {
+            includeExtradata = true
+        } else if (operatorToken == "!=" && originalOperator === "IS NOT") {
+            operatorToken = "!=";
+            includeExtradata = true;
         }
-
         let comparison = [left, operatorToken, right];
+        if (includeExtradata)
+            comparison = [left, operatorToken, right, { type: originalOperator }, right];
 
         // Last null because of special case when using dropdown it https://github.com/DevExpress/DevExtreme/blob/25_1/packages/devextreme/js/__internal/data/m_utils.ts#L18 it takes last value as null
         if ((ast.left && isFunctionNullCheck(ast.left, true)) || (ast.value && isFunctionNullCheck(ast.value, false))) {
@@ -205,22 +214,51 @@ function DevExpressConverter() {
             resolvedValue = resolvedValue.split(',').map(v => v.trim());
         }
 
-        let operatorToken = operator === "IN" ? '=' : operator === "NOT IN" ? '!=' : operator;
-        let joinOperatorToken = operator === "IN" ? 'or' : operator === "NOT IN" ? 'and' : operator;
+        // handle short circuit evaluation for IN operator
+        if (EnableShortCircuit && (LITERAL_TYPES.includes(ast.field?.type) && LITERAL_TYPES.includes(ast.value?.type))) {
+            const fieldVal = convertValue(ast.field);
+            if (Array.isArray(resolvedValue)) {
+                // normalize numeric strings if LHS is number
+                const list = resolvedValue.map(x =>
+                    (typeof x === "string" && !isNaN(x) && typeof fieldVal === "number")
+                        ? Number(x)
+                        : x
+                );
 
-        if (Array.isArray(resolvedValue) && resolvedValue.length) {
-            return resolvedValue.flatMap(i => [[ast.field, operatorToken, i], joinOperatorToken]).slice(0, -1);
+                if (operator === "IN")
+                    return list.includes(fieldVal);
+                else if (operator === "NOT IN")
+                    return !list.includes(fieldVal);
+            } else if (!Array.isArray(resolvedValue)) {
+                // normalize numeric strings if LHS is number
+                const value = (typeof resolvedValue === "string" && !isNaN(resolvedValue) && typeof fieldVal === "number")
+                    ? Number(resolvedValue)
+                    : resolvedValue;
+
+                if (operator === "IN")
+                    return fieldVal == value;
+                else if (operator === "NOT IN")
+                    return fieldVal != value;
+            }
         }
 
-        return [ast.field, operatorToken, resolvedValue];
+        let operatorToken = operator === "IN" ? '=' : operator === "NOT IN" ? '!=' : operator;
+        let joinOperatorToken = operator === "IN" ? 'or' : operator === "NOT IN" ? 'and' : operator;
+        let field = convertValue(ast.field);
+        if (Array.isArray(resolvedValue) && resolvedValue.length) {
+            return resolvedValue.flatMap(i => [[field, operatorToken, i], joinOperatorToken]).slice(0, -1);
+        }
+
+        return [field, operatorToken, resolvedValue];
     }
 
     /**
      * Converts a single value, resolving placeholders and handling special cases.
      * @param {*} val - The value to convert.
+     * @param {string} parentOperator - The operator of the parent logical node (if any).
      * @returns {*} Converted value.
      */
-    function convertValue(val) {
+    function convertValue(val, parentOperator = null) {
         if (val === null) return null;
 
         // Handle array values
@@ -249,6 +287,10 @@ function DevExpressConverter() {
             if (val.type) {
                 return processAstNode(val);
             }
+        }
+
+        if (parentOperator && parentOperator.toUpperCase() === "IN" && typeof val === "string") {
+            return val.split(',').map(v => v.trim());
         }
 
         return val;
@@ -367,6 +409,10 @@ function DevExpressConverter() {
         if (right == null && rightDefault != undefined) right = rightDefault;
 
         if ((left !== null && isNaN(left)) || (right !== null && isNaN(right))) return null;
+
+        // Handle NULL == 0 OR NULL == "" cases
+        if (left === null && (right == 0 || right == "")) return true;
+        if (right === null && (left == 0 || left == "")) return true;
 
         if (left === null || right === null) {
             if (operator === '=' || operator === '==') return left === right;

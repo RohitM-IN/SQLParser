@@ -76,13 +76,13 @@ describe("Parser SQL to dx Filter Builder", () => {
                         ["ToDate", ">=", "2022-01-01"]
                     ],
                     'or',
-                    ["ToDate", "=", null]
+                    ["ToDate", "=", null, { "type": "IS" }, null]
                 ],
                 "and",
                 [
                     ["BranchID", "=", 42],
                     "or",
-                    ["RefBranchID", "=", null]
+                    ["RefBranchID", "=", null, { "type": "IS" }, null]
                 ],
                 "and",
                 [
@@ -90,7 +90,7 @@ describe("Parser SQL to dx Filter Builder", () => {
                     // "or",
                     // [7,"=",0],
                     "or",
-                    ["CompanyID", "=", null]
+                    ["CompanyID", "=", null, { "type": "IS" }, null]
                 ]
             ]
         },
@@ -112,7 +112,7 @@ describe("Parser SQL to dx Filter Builder", () => {
                 ["CompanyID", "=", 7],
                 // ],
                 "or",
-                ["CompanyID", "=", null],
+                ["CompanyID", "=", null, { "type": "IS" }, null],
                 // ],
                 'or',
                 ["BranchID", "=", 42]
@@ -127,9 +127,9 @@ describe("Parser SQL to dx Filter Builder", () => {
         {
             input: "BranchID is Null OR BranchID is not 12",
             expected: [
-                ["BranchID", "=", null],
+                ["BranchID", "=", null, { "type": "IS" }, null],
                 "or",
-                ["BranchID", "!=", 12]
+                ["BranchID", "!=", 12, { "type": "IS NOT" }, 12]
             ]
         },
         {
@@ -214,6 +214,52 @@ describe("Parser SQL to dx Filter Builder", () => {
         {
             input: "(RS2ID in ({SaleOrderStatusStmtGlobalRpt.StateID}) Or (ISNULL({SaleOrderStatusStmtGlobalRpt.StateID},0) =0)) And (RS3ID  in (0,{SaleOrderStatusStmtGlobalRpt.RegionID}) Or ISNULL({SaleOrderStatusStmtGlobalRpt.RegionID},0) =0 )",
             expected: []
+        },
+        {
+            input: "ID IN ({WorkOrderLine.CompanyIDs}) AND 0 IN ({WorkOrderLine.CompanyIDs})",
+            expected: [
+                ["ID", "=", "0"],
+                "or",
+                ["ID", "=", "1"]
+            ]
+        },
+        {
+            input: "CompanyID is null OR CompanyID is 7 OR CompanyID is not 8",
+            expected: [
+                ["CompanyID", "=", null, { "type": "IS" }, null],
+                "or",
+                ["CompanyID", "=", 7, { "type": "IS" }, 7],
+                "or",
+                ["CompanyID", "!=", 8, { "type": "IS NOT" }, 8]
+            ]
+        },
+        {
+            input: "null = 0",
+            expected: []
+        },
+        {
+            input: "null = null",
+            expected: []
+        },
+        {
+            input: "null = {SaleOrderStatusStmtGlobalRpt.StateID}",
+            expected: []
+        },
+        {
+            input: "null = {SaleOrderStatusStmtGlobalRpt.RegionID}",
+            expected: []
+        },
+        {
+            input: "null = {LeadDocument.CompanyID}",
+            expected: []
+        },
+        {
+            input: "{LeadDocument.BranchID} = null",
+            expected: []
+        },
+        {
+            input: "{LeadDocument.AllowSubDealer} != null",
+            expected: []
         }
     ];
 
@@ -277,4 +323,5 @@ const sampleData = {
     "SupportResolution.TicketID": 123,
     "SaleOrderStatusStmtGlobalRpt.StateID": null,
     "SaleOrderStatusStmtGlobalRpt.RegionID": null,
+    "WorkOrderLine.CompanyIDs": ["0,1"],
 };

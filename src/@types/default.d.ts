@@ -1,35 +1,41 @@
-export type StateDataObject = Record<string, any>;
+import { DevExpressFilter, ResultObject } from "./core/converter";
+import { ASTNode, ParseResult } from "./core/parser";
 
-export interface SanitizedQuery {
-    sanitizedSQL: string;
-    extractedVariables: string[];
-}
+/**
+ * Converts an SQL-like filter string into an Abstract Syntax Tree (AST).
+ * It also extracts variables from placeholders like `{CustomerID}` or pipe-separated sections.
+ * Optionally logs the conversion process if `enableConsoleLogs` is `true`.
+ *
+ * Example:
+ * ```
+ * const { ast, variables } = convertSQLToAst("ID = {CustomerID} AND Status = {OrderStatus}");
+ * console.log(ast);
+ * console.log(variables);
+ * ```
+ *
+ * @param filterString - The raw SQL-like filter string.
+ * @param enableConsoleLogs - Whether to log the parsing and sanitization process.
+ * @returns ParseResult - The AST and extracted variables.
+ */
+export function convertSQLToAst(filterString: string, enableConsoleLogs?: boolean): ParseResult;
 
-export interface ParsedResult {
-    ast: any; // Define a more specific type if possible
-    variables: string[];
-}
-
-export interface ConvertToDevExpressFormatParams {
-    ast: any; // Define a more specific type if possible
-    resultObject?: StateDataObject | null;
-    enableShortCircuit?: boolean;
-}
-
-export function sanitizeQuery(filterString: string): SanitizedQuery;
-
-export function parse(query: string, variables: string[]): ParsedResult;
-
-export function convertToDevExpressFormat(params: ConvertToDevExpressFormatParams): any;
-
-export function convertSQLToAst(
-    filterString: string,
-    SampleData?: StateDataObject | null,
-    enableConsoleLogs?: boolean
-): ParsedResult;
-
+/**
+ * Converts an Abstract Syntax Tree (AST) into a DevExpress-compatible filter format.
+ * Optionally supports a result object for dynamic value resolution and short-circuit evaluation.
+ *
+ * Example:
+ * ```
+ * const filter = convertAstToDevextreme(ast, state, true);
+ * console.log(filter);
+ * ```
+ *
+ * @param ast - The parsed AST from `convertSQLToAst`.
+ * @param state - An optional result object to resolve placeholders to actual values.
+ * @param enableShortCircuit - Whether to apply short-circuit evaluation.
+ * @returns DevExpressFilter - The DevExpress-compatible filter array or null.
+ */
 export function convertAstToDevextreme(
-    ast: any, // Define a more specific type if possible
-    state?: StateDataObject | null,
+    ast: ASTNode,
+    state?: ResultObject | null,
     enableShortCircuit?: boolean,
-): any;
+): DevExpressFilter;
