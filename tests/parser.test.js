@@ -232,6 +232,34 @@ describe("Parser SQL to dx Filter Builder", () => {
                 "or",
                 ["CompanyID", "!=", 8, { "type": "IS NOT" }, 8]
             ]
+        },
+        {
+            input: "null = 0",
+            expected: []
+        },
+        {
+            input: "null = null",
+            expected: []
+        },
+        {
+            input: "null = {SaleOrderStatusStmtGlobalRpt.StateID}",
+            expected: []
+        },
+        {
+            input: "null = {SaleOrderStatusStmtGlobalRpt.RegionID}",
+            expected: []
+        },
+        {
+            input: "null = {LeadDocument.CompanyID}",
+            expected: []
+        },
+        {
+            input: "{LeadDocument.BranchID} = null",
+            expected: []
+        },
+        {
+            input: "{LeadDocument.AllowSubDealer} != null",
+            expected: []
         }
     ];
 

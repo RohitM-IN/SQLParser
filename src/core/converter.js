@@ -410,6 +410,10 @@ function DevExpressConverter() {
 
         if ((left !== null && isNaN(left)) || (right !== null && isNaN(right))) return null;
 
+        // Handle NULL == 0 OR NULL == "" cases
+        if (left === null && (right == 0 || right == "")) return true;
+        if (right === null && (left == 0 || left == "")) return true;
+
         if (left === null || right === null) {
             if (operator === '=' || operator === '==') return left === right;
             if (operator === '<>' || operator === '!=') return left !== right;

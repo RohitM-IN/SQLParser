@@ -1,6 +1,6 @@
 {
   "name": "sqlparser-devexpress",
-  "version": "2.3.15",
+  "version": "2.3.16",
   "main": "src/index.js",
   "type": "module",
   "scripts": {
