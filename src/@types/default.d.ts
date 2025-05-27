@@ -32,10 +32,12 @@ export function convertSQLToAst(filterString: string, enableConsoleLogs?: boolea
  * @param ast - The parsed AST from `convertSQLToAst`.
  * @param state - An optional result object to resolve placeholders to actual values.
  * @param enableShortCircuit - Whether to apply short-circuit evaluation.
+ * @param isValueNullShortCircuit - Whether to treat null values as short-circuit conditions.
  * @returns DevExpressFilter - The DevExpress-compatible filter array or null.
  */
 export function convertAstToDevextreme(
     ast: ASTNode,
     state?: ResultObject | null,
     enableShortCircuit?: boolean,
+    isValueNullShortCircuit?: boolean
 ): DevExpressFilter;
