@@ -10,6 +10,7 @@ export interface ConvertOptions {
     ast: ASTNode;
     resultObject?: ResultObject;
     enableShortCircuit?: boolean;
+    isValueNullShortCircuit?: boolean;
 }
 
 /**
