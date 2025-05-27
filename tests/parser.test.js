@@ -260,6 +260,14 @@ describe("Parser SQL to dx Filter Builder", () => {
         {
             input: "{LeadDocument.AllowSubDealer} != null",
             expected: []
+        },
+        {
+            input: "ID = {SaleOrderStatusStmtGlobalRpt.RegionID}",
+            expected: []
+        },
+        {
+            input: "ID IN ({SaleOrderStatusStmtGlobalRpt.RegionID})",
+            expected: []
         }
     ];
 
@@ -282,7 +290,7 @@ describe("Parser SQL to dx Filter Builder", () => {
             const variables = astwithVariables.variables;
             const ast = astwithVariables.ast;
 
-            const result = convertAstToDevextreme(ast, sampleData);
+            const result = convertAstToDevextreme(ast, sampleData, true, true);
 
             if (result == null || result == true || result == false) {
                 expect([]).toEqual(expected);

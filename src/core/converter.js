@@ -8,7 +8,7 @@ function DevExpressConverter() {
     // Global variables accessible throughout the converter
     let resultObject = null;
     let EnableShortCircuit = true;
-    let isNullShortCircuit = false; // Flag to enable/disable null short-circuiting
+    let IsValueNullShortCircuit = false; // Flag to enable/disable null short-circuiting
 
     /**
    * Main conversion function that sets up the global context
@@ -17,11 +17,11 @@ function DevExpressConverter() {
    * @param {boolean} enableShortCircuit - Optional enabling and disabling the shortcircuit ie evaluating value = value scenario 
    * @returns {Array|null} DevExpress format filter
    */
-    function convert(ast, ResultObject = null, enableShortCircuit = true, isNullShortCircuit = false) {
+    function convert(ast, ResultObject = null, enableShortCircuit = true, isValueNullShortCircuit = false) {
         // Set up global context
         resultObject = ResultObject;
         EnableShortCircuit = enableShortCircuit;
-        isNullShortCircuit = isNullShortCircuit;
+        IsValueNullShortCircuit = isValueNullShortCircuit;
 
         // Process the AST
         let result = processAstNode(ast);
@@ -167,12 +167,13 @@ function DevExpressConverter() {
         }
 
         // Apply short-circuit evaluation if enabled
+        if (EnableShortCircuit && IsValueNullShortCircuit && (left == null || right == null)) {
+            return true; // If either value is null, return true for short-circuit evaluation
+        }
+
         if (EnableShortCircuit) {
             if (isAlwaysTrue(comparison, leftDefault, rightDefault)) return true;
             if (isAlwaysFalse(comparison, leftDefault, rightDefault)) return false;
-            if(isNullShortCircuit && left == null || right == null) {
-                return true;
-            }
         }
 
         return comparison;
@@ -247,7 +248,7 @@ function DevExpressConverter() {
             }
         }
 
-        if(EnableShortCircuit && isNullShortCircuit && (ast.field?.type === "placeholder" || ast.value?.type === "placeholder") && resolvedValue === null) {
+        if (EnableShortCircuit && IsValueNullShortCircuit && (ast.field?.type === "placeholder" || ast.value?.type === "placeholder" || ast.value === null) && resolvedValue === null) {
             return true;
         }
 
@@ -452,8 +453,9 @@ const devExpressConverter = DevExpressConverter();
  * @param {Object} ast - The abstract syntax tree
  * @param {Object} resultObject - Optional object for placeholder resolution
  * @param {string} enableShortCircuit - Optional enabling and disabling the shortcircuit ie evaluating value = value scenario 
+ * @param {boolean} isValueNullShortCircuit - Optional enabling and disabling the null shortcircuit ie evaluating value = null scenario
  * @returns {Array|null} DevExpress format filter
  */
-export function convertToDevExpressFormat({ ast, resultObject = null, enableShortCircuit = true }) {
-    return devExpressConverter.init(ast, resultObject, enableShortCircuit);
+export function convertToDevExpressFormat({ ast, resultObject = null, enableShortCircuit = true, isValueNullShortCircuit = false }) {
+    return devExpressConverter.init(ast, resultObject, enableShortCircuit, isValueNullShortCircuit);
 }
