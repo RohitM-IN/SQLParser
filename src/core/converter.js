@@ -8,6 +8,7 @@ function DevExpressConverter() {
     // Global variables accessible throughout the converter
     let resultObject = null;
     let EnableShortCircuit = true;
+    let isNullShortCircuit = false; // Flag to enable/disable null short-circuiting
 
     /**
    * Main conversion function that sets up the global context
@@ -16,10 +17,11 @@ function DevExpressConverter() {
    * @param {boolean} enableShortCircuit - Optional enabling and disabling the shortcircuit ie evaluating value = value scenario 
    * @returns {Array|null} DevExpress format filter
    */
-    function convert(ast, ResultObject = null, enableShortCircuit = true) {
+    function convert(ast, ResultObject = null, enableShortCircuit = true, isNullShortCircuit = false) {
         // Set up global context
         resultObject = ResultObject;
         EnableShortCircuit = enableShortCircuit;
+        isNullShortCircuit = isNullShortCircuit;
 
         // Process the AST
         let result = processAstNode(ast);
@@ -89,6 +91,7 @@ function DevExpressConverter() {
         const left = processAstNode(ast.left, operator);
         const right = processAstNode(ast.right, operator);
 
+
         if (EnableShortCircuit) {
             // Short-circuit: always-true conditions
             if (left === true || right === true) {
@@ -100,7 +103,6 @@ function DevExpressConverter() {
             if (left === false || right === false) {
                 return left === false ? right : left;
             }
-
         }
 
         // Detect and flatten nested logical expressions
@@ -168,6 +170,9 @@ function DevExpressConverter() {
         if (EnableShortCircuit) {
             if (isAlwaysTrue(comparison, leftDefault, rightDefault)) return true;
             if (isAlwaysFalse(comparison, leftDefault, rightDefault)) return false;
+            if(isNullShortCircuit && left == null || right == null) {
+                return true;
+            }
         }
 
         return comparison;
@@ -240,6 +245,10 @@ function DevExpressConverter() {
                 else if (operator === "NOT IN")
                     return fieldVal != value;
             }
+        }
+
+        if(EnableShortCircuit && isNullShortCircuit && (ast.field?.type === "placeholder" || ast.value?.type === "placeholder") && resolvedValue === null) {
+            return true;
         }
 
         let operatorToken = operator === "IN" ? '=' : operator === "NOT IN" ? '!=' : operator;
