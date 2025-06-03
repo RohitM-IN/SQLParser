@@ -140,6 +140,19 @@ export function parse(input, variables = []) {
 				// Recursively parse the right-hand expression with adjusted precedence
 				const right = parseExpression(OPERATOR_PRECEDENCE[operator]);
 				left = { type: "logical", operator, left, right };
+			} else if (currentToken?.type == "identifier") {
+				const right = parseValue(operator);
+				let newOp = operator;
+				if (operator === '>') newOp = '<';
+				else if (operator === '<') newOp = '>';
+				else if (operator === '>=') newOp = '<=';
+				else if (operator === '<=') newOp = '>=';
+				left = {
+					type: "comparison",
+					right: left,
+					operator: newOp,
+					left: { type: "field", value: right }
+				};
 			}
 		}
 
@@ -216,6 +229,11 @@ export function parse(input, variables = []) {
 			// Check for invalid comparisons between two identifiers
 			if (fieldType === "identifier" && valueType === "identifier") {
 				throw new Error(`Invalid comparison: ${field} ${operator} ${value}`);
+			}
+
+			// Swap the field and value if the field is a placeholder and the value is an identifier
+			if (valueType == "identifier" && fieldType == "placeholder") {
+				return { type: "comparison", value: field, operator, field: value, originalOperator };
 			}
 
 			return { type: "comparison", field, operator, value, originalOperator };

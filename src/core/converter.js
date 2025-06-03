@@ -139,9 +139,9 @@ function DevExpressConverter() {
         }
 
         const left = ast.left !== undefined ? processAstNode(ast.left) : convertValue(ast.field);
-        const leftDefault = ast.left?.args[1]?.value;
+        const leftDefault = ast.left?.args && ast.left?.args[1]?.value;
         const right = ast.right !== undefined ? processAstNode(ast.right) : convertValue(ast.value);
-        const rightDefault = ast.right?.args[1]?.value;
+        const rightDefault = ast.right?.args && ast.right?.args[1]?.value;
         let operatorToken = ast.operator.toLowerCase();
         let includeExtradata = false;
 

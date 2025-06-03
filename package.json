@@ -1,10 +1,10 @@
 {
   "name": "sqlparser-devexpress",
-  "version": "2.3.17",
+  "version": "2.3.18",
   "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "test": "vitest"
+    "test": "vitest run"
   },
   "exports": {
     "import": "./src/index.js",
