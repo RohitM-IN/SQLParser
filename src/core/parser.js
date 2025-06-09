@@ -140,6 +140,16 @@ export function parse(input, variables = []) {
 				// Recursively parse the right-hand expression with adjusted precedence
 				const right = parseExpression(OPERATOR_PRECEDENCE[operator]);
 				left = { type: "logical", operator, left, right };
+			} else if (currentToken?.type == "identifier") {
+				const right = parseValue(operator);
+				let newOperator = inverseOperator(operator);
+
+				left = {
+					type: "comparison",
+					right: left,
+					operator: newOperator,
+					left: { type: "field", value: right }
+				};
 			}
 		}
 
@@ -218,10 +228,26 @@ export function parse(input, variables = []) {
 				throw new Error(`Invalid comparison: ${field} ${operator} ${value}`);
 			}
 
+			// Swap the field and value if the field is a placeholder and the value is an identifier
+			if (valueType == "identifier" && fieldType == "placeholder") {
+				let newOperator = inverseOperator(operator);
+				return { type: "comparison", value: field, operator: newOperator, field: value, originalOperator };
+			}
+
 			return { type: "comparison", field, operator, value, originalOperator };
 		}
 
 		return { type: "field", value: field };
+	}
+
+	function inverseOperator(operator) {
+		switch (operator.toUpperCase()) {
+			case ">": return "<";
+			case "<": return ">";
+			case ">=": return "<=";
+			case "<=": return ">=";
+			default: return operator; // Return the operator as is if no inverse is defined
+		}
 	}
 
 	// Parses values including numbers, strings, placeholders, and IN lists
