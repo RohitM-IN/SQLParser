@@ -1,7 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { convertToDevExpressFormat } from "../src/core/converter";
-import { parse } from "../src/core/parser";
-import { sanitizeQuery } from "../src/core/sanitizer";
 import { convertAstToDevextreme, convertSQLToAst } from "../src";
 
 describe("Parser SQL to dx Filter Builder", () => {

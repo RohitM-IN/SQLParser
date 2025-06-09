@@ -9,8 +9,11 @@ export type DevExpressFilter = any[] | null;
 export interface ConvertOptions {
     ast: ASTNode;
     resultObject?: ResultObject;
-    enableShortCircuit?: boolean;
-    isValueNullShortCircuit?: boolean;
+    options?: {
+        enableShortCircuit?: boolean;
+        isValueNullShortCircuit?: boolean;
+        treatNumberAsNullableBit?: boolean;
+    };
 }
 
 /**

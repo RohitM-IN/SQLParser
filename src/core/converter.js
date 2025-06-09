@@ -9,19 +9,23 @@ function DevExpressConverter() {
     let resultObject = null;
     let EnableShortCircuit = true;
     let IsValueNullShortCircuit = false; // Flag to enable/disable null short-circuiting
+    let TreatNumberAsNullableBit = false; // Flag to enable/disable optional boolean with number conversion
 
     /**
    * Main conversion function that sets up the global context
    * @param {Object} ast - The abstract syntax tree
    * @param {Object} ResultObject - Optional object for placeholder resolution
    * @param {boolean} enableShortCircuit - Optional enabling and disabling the shortcircuit ie evaluating value = value scenario 
+   * @param {boolean} isValueNullShortCircuit - Optional enabling and disabling the null shortcircuit ie evaluating value = null scenario
+   * @param {boolean} treatNumberAsNullableBit - Optional enabling and disabling the optional boolean with number conversion
    * @returns {Array|null} DevExpress format filter
    */
-    function convert(ast, ResultObject = null, enableShortCircuit = true, isValueNullShortCircuit = false) {
+    function convert(ast, ResultObject = null, enableShortCircuit = true, isValueNullShortCircuit = false, treatNumberAsNullableBit = false) {
         // Set up global context
         resultObject = ResultObject;
         EnableShortCircuit = enableShortCircuit;
         IsValueNullShortCircuit = isValueNullShortCircuit;
+        TreatNumberAsNullableBit = treatNumberAsNullableBit;
 
         // Process the AST
         let result = processAstNode(ast);
@@ -174,6 +178,23 @@ function DevExpressConverter() {
         if (EnableShortCircuit) {
             if (isAlwaysTrue(comparison, leftDefault, rightDefault)) return true;
             if (isAlwaysFalse(comparison, leftDefault, rightDefault)) return false;
+        }
+
+        if (TreatNumberAsNullableBit && typeof right === "number" && (right == 0 || right == 1)) {
+
+            if (Array.isArray(comparison[0])) {
+                return [
+                    ...comparison,
+                    'or',
+                    [left, operatorToken, right == true]
+                ];
+            }
+
+            return [
+                [...comparison],
+                'or',
+                [left, operatorToken, right == true]
+            ];
         }
 
         return comparison;
@@ -452,10 +473,13 @@ const devExpressConverter = DevExpressConverter();
  * Converts an abstract syntax tree to DevExpress format
  * @param {Object} ast - The abstract syntax tree
  * @param {Object} resultObject - Optional object for placeholder resolution
- * @param {string} enableShortCircuit - Optional enabling and disabling the shortcircuit ie evaluating value = value scenario 
- * @param {boolean} isValueNullShortCircuit - Optional enabling and disabling the null shortcircuit ie evaluating value = null scenario
+ * @param {Object} options - Optional options for conversion
+ * @param {boolean} options.enableShortCircuit - Enable or disable short-circuit evaluation
+ * @param {boolean} options.isValueNullShortCircuit - Enable or disable null short-circuit evaluation
+ * @param {boolean} options.treatNumberAsNullableBit  - Enable or disable optional boolean with number conversion
  * @returns {Array|null} DevExpress format filter
  */
-export function convertToDevExpressFormat({ ast, resultObject = null, enableShortCircuit = true, isValueNullShortCircuit = false }) {
-    return devExpressConverter.init(ast, resultObject, enableShortCircuit, isValueNullShortCircuit);
+export function convertToDevExpressFormat({ ast, resultObject = null, options = {} }) {
+    const { enableShortCircuit = true, isValueNullShortCircuit = false, treatNumberAsNullableBit = false } = options;
+    return devExpressConverter.init(ast, resultObject, enableShortCircuit, isValueNullShortCircuit, treatNumberAsNullableBit);
 }

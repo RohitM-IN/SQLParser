@@ -141,7 +141,9 @@ describe("Parser SQL to dx Filter Builder", () => {
                 "or",
                 ["SourceID", "=", 0],
                 "or",
-                ["SourceID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null]
+                ["SourceID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null],
+                "or",
+                ["SourceID", "=", false]
             ]
         },
         {
@@ -153,7 +155,9 @@ describe("Parser SQL to dx Filter Builder", () => {
                     [
                         ["CompanyID", "=", 0],
                         "or",
-                        ["CompanyID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null]
+                        ["CompanyID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null],
+                        "or",
+                        ["CompanyID", "=", false]
                     ]
                 ],
                 "and",
@@ -199,7 +203,9 @@ describe("Parser SQL to dx Filter Builder", () => {
                 "or",
                 ["CompanyID", "=", 0],
                 "or",
-                ["CompanyID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null]
+                ["CompanyID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null],
+                "or",
+                ["CompanyID", "=", false]
 
             ]
         },
@@ -288,6 +294,14 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 "ID", "=", 2
             ]
+        },
+        {
+            input: "IsChecked = 1",
+            expected: [
+                ["IsChecked", "=", 1],
+                "or",
+                ["IsChecked", "=", true]
+            ]
         }
     ];
 
@@ -310,7 +324,10 @@ describe("Parser SQL to dx Filter Builder", () => {
             const variables = astwithVariables.variables;
             const ast = astwithVariables.ast;
 
-            const result = convertAstToDevextreme(ast, sampleData, true, true);
+            const result = convertAstToDevextreme(ast, sampleData, {
+                isValueNullShortCircuit: true,
+                treatNumberAsNullableBit: true
+            });
 
             if (result == null || result == true || result == false) {
                 expect([]).toEqual(expected);
