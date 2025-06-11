@@ -111,8 +111,8 @@ function DevExpressConverter() {
 
         // Detect and flatten nested logical expressions
         if (parentOperator === null) {
-            if (left.length === 3 && LOGICAL_OPERATORS.includes(left[1])) parentOperator = left[1];
-            if (right.length === 3 && LOGICAL_OPERATORS.includes(right[1])) parentOperator = right[1];
+            if (left && left.length === 3 && LOGICAL_OPERATORS.includes(left[1])) parentOperator = left[1];
+            if (right && right.length === 3 && LOGICAL_OPERATORS.includes(right[1])) parentOperator = right[1];
         }
 
         // Flatten nested logical expressions if applicable
