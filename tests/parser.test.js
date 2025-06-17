@@ -302,6 +302,36 @@ describe("Parser SQL to dx Filter Builder", () => {
                 "or",
                 ["IsChecked", "=", true]
             ]
+        },
+        {
+            input: "ISNULL(CompanyID,0) = ISNULL({TransferOutwardDocument.CompanyID},0) OR (ISNULL(CompanyID,0) = 0)",
+            expected: [
+                [
+
+                    ["CompanyID", "=", 7],
+                    "or",
+                    [
+                        ["CompanyID", "=", 0],
+                        "or",
+                        ["CompanyID", "=", null,
+                            {
+                                "type": "ISNULL",
+                                "defaultValue": 0
+                            }, null
+                        ],
+                        "or",
+                        ["CompanyID", "=", false]
+                    ]
+                ],
+                "or",
+                [
+                    "CompanyID", "=", null,
+                    {
+                        "type": "ISNULL",
+                        "defaultValue": 0
+                    }, null
+                ]
+            ]
         }
     ];
 

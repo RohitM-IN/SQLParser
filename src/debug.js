@@ -28,7 +28,7 @@
 //     return convertToDevExpressFormat({ ast: astTree, resultObject: sampleData, isValueNullShortCircuit: true });
 // }
 
-// const devexpress = parseFilterString("(ISNULL(TicketID, 0) = ISNULL({CustomerOrders.OrderID}, 0))", sampleData);
+// const devexpress = parseFilterString("ISNULL(CompanyID,0) = ISNULL({CustomerOrders.OrderID},0) OR (ISNULL(CompanyID,0) = 0)", sampleData);
 // console.log("DevExpress Filter:", JSON.stringify(devexpress, null, 2));
 // // const devexpress = parseFilterString("(RS2ID in ({LeadStatementGlobalRpt.StateID}) Or ({LeadStatementGlobalRpt.StateID} =0)) And (RS3ID  in (0,{LeadStatementGlobalRpt.RegionID}) Or {LeadStatementGlobalRpt.RegionID} =0 )", sampleData);
 

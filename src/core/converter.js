@@ -160,14 +160,31 @@ function DevExpressConverter() {
             includeExtradata = true;
         }
         let comparison = [left, operatorToken, right];
+
         if (includeExtradata)
             comparison = [left, operatorToken, right, { type: originalOperator }, right];
 
         // Last null because of special case when using dropdown it https://github.com/DevExpress/DevExtreme/blob/25_1/packages/devextreme/js/__internal/data/m_utils.ts#L18 it takes last value as null
         if ((ast.left && isFunctionNullCheck(ast.left, true)) || (ast.value && isFunctionNullCheck(ast.value, false))) {
-            comparison = [[left, operatorToken, right], 'or', [left, operatorToken, null, { type: "ISNULL", defaultValue: (ast.left ?? ast.value).args[1]?.value }, null]];
+            const nullCheckArg = (ast.left ?? ast.value).args[1]?.value;
+            let baseComparison = comparison;
+
+            if (Array.isArray(right) && (right.includes("or") || right.includes("and"))) {
+                const valueRight = right.shift();
+                baseComparison = [[left, operatorToken, valueRight], ...right];
+            }
+
+            comparison = [baseComparison, 'or', [left, operatorToken, null, { type: "ISNULL", defaultValue: nullCheckArg }, null]];
         } else if (ast.right && isFunctionNullCheck(ast.right, true)) {
-            comparison = [[left, operatorToken, right], 'or', [right, operatorToken, null, { type: "ISNULL", defaultValue: ast.right.args[1]?.value }, null]];
+            const nullCheckArg = ast.right.args[1]?.value;
+            let baseComparison = comparison;
+
+            if (Array.isArray(right) && (right.includes("or") || right.includes("and"))) {
+                const valueRight = right.shift();
+                baseComparison = [[left, operatorToken, valueRight], ...right];
+            }
+
+            comparison = [baseComparison, 'or', [right, operatorToken, null, { type: "ISNULL", defaultValue: nullCheckArg }, null]];
         }
 
         // Apply short-circuit evaluation if enabled
