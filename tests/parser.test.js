@@ -71,18 +71,20 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 [
                     [
-                        ["FromDate", "<=", "2022-01-01"],
-                        'and',
-                        ["ToDate", ">=", "2022-01-01"]
+                        [
+                            ["FromDate", "<=", "2022-01-01"],
+                            'and',
+                            ["ToDate", ">=", "2022-01-01"]
+                        ],
+                        'or',
+                        ["ToDate", "=", null, { "type": "IS" }, null]
                     ],
-                    'or',
-                    ["ToDate", "=", null, { "type": "IS" }, null]
-                ],
-                "and",
-                [
-                    ["BranchID", "=", 42],
-                    "or",
-                    ["RefBranchID", "=", null, { "type": "IS" }, null]
+                    "and",
+                    [
+                        ["BranchID", "=", 42],
+                        "or",
+                        ["RefBranchID", "=", null, { "type": "IS" }, null]
+                    ]
                 ],
                 "and",
                 [
@@ -137,11 +139,11 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 ["SourceID", "=", 2],
                 "or",
-                ["SourceID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null],
+                ["SourceID", "=", null, { "defaultValue": 0, "position": "column", "type": "ISNULL" }, null],
                 "or",
                 ["SourceID", "=", 0],
                 "or",
-                ["SourceID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null],
+                ["SourceID", "=", null, { "defaultValue": 0, "position": "column", "type": "ISNULL" }, null],
                 "or",
                 ["SourceID", "=", false]
             ]
@@ -155,7 +157,7 @@ describe("Parser SQL to dx Filter Builder", () => {
                     [
                         ["CompanyID", "=", 0],
                         "or",
-                        ["CompanyID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null],
+                        ["CompanyID", "=", null, { "defaultValue": 0, "position": "column", "type": "ISNULL" }, null],
                         "or",
                         ["CompanyID", "=", false]
                     ]
@@ -164,7 +166,7 @@ describe("Parser SQL to dx Filter Builder", () => {
                 [
                     ["IsSubdealer", "=", true],
                     "or",
-                    ["IsSubdealer", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null]
+                    ["IsSubdealer", "=", null, { "defaultValue": 0, "position": "column", "type": "ISNULL" }, null]
                 ]
             ]
         },
@@ -189,9 +191,9 @@ describe("Parser SQL to dx Filter Builder", () => {
         {
             input: "(ISNULL(TicketID, 0) = ISNULL({SupportResolution.TicketID}, 0))",
             expected: [
-                ["TicketID", "=", 123],
+                ["TicketID", "=", 123, { "type": "ISNULL", "position": "both", "defaultValue": 0, "defaultValueRight": 0 }, 123],
                 "or",
-                ["TicketID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null]
+                ["TicketID", "=", null]
             ]
         },
         {
@@ -199,14 +201,13 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 ["CompanyID", "=", 7],
                 "or",
-                ["CompanyID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null],
+                ["CompanyID", "=", null, { "type": "ISNULL", "position": "value", "defaultValue": 0 }, null],
                 "or",
                 ["CompanyID", "=", 0],
                 "or",
-                ["CompanyID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null],
+                ["CompanyID", "=", null, { "type": "ISNULL", "position": "column", "defaultValue": 0 }, null],
                 "or",
                 ["CompanyID", "=", false]
-
             ]
         },
         {
@@ -306,31 +307,15 @@ describe("Parser SQL to dx Filter Builder", () => {
         {
             input: "ISNULL(CompanyID,0) = ISNULL({TransferOutwardDocument.CompanyID},0) OR (ISNULL(CompanyID,0) = 0)",
             expected: [
-                [
-
-                    ["CompanyID", "=", 7],
-                    "or",
-                    [
-                        ["CompanyID", "=", 0],
-                        "or",
-                        ["CompanyID", "=", null,
-                            {
-                                "type": "ISNULL",
-                                "defaultValue": 0
-                            }, null
-                        ],
-                        "or",
-                        ["CompanyID", "=", false]
-                    ]
-                ],
+                ["CompanyID", "=", 7, { "type": "ISNULL", "position": "both", "defaultValue": 0, "defaultValueRight": 0 }, 7],
                 "or",
-                [
-                    "CompanyID", "=", null,
-                    {
-                        "type": "ISNULL",
-                        "defaultValue": 0
-                    }, null
-                ]
+                ["CompanyID", "=", null],
+                "or",
+                ["CompanyID", "=", 0],
+                "or",
+                ["CompanyID", "=", null, { "type": "ISNULL", "position": "column", "defaultValue": 0 }, null],
+                "or",
+                ["CompanyID", "=", false]
             ]
         }
     ];

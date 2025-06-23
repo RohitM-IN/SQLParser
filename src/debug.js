@@ -11,7 +11,8 @@
 //     'LeadStatementGlobalRpt.StateID': null,
 //     'LeadStatementGlobalRpt.RegionID': null,
 //     'ServiceOrderDocument.SourceID': 2,
-//     'CustomerOrders.OrderID': 76548
+//     'CustomerOrders.OrderID': 76548,
+//     "TransferOutwardDocument.CompanyID": 7,
 // }
 
 // export function parseFilterString(filterString, sampleData = null) {
@@ -28,7 +29,7 @@
 //     return convertToDevExpressFormat({ ast: astTree, resultObject: sampleData, isValueNullShortCircuit: true });
 // }
 
-// const devexpress = parseFilterString("ISNULL(CompanyID,0) = ISNULL({CustomerOrders.OrderID},0) OR (ISNULL(CompanyID,0) = 0)", sampleData);
+// const devexpress = parseFilterString("ISNULL(CompanyID,0) = ISNULL({TransferOutwardDocument.CompanyID},0) OR ISNULL(CompanyID,0) = 0", sampleData);
 // console.log("DevExpress Filter:", JSON.stringify(devexpress, null, 2));
 // // const devexpress = parseFilterString("(RS2ID in ({LeadStatementGlobalRpt.StateID}) Or ({LeadStatementGlobalRpt.StateID} =0)) And (RS3ID  in (0,{LeadStatementGlobalRpt.RegionID}) Or {LeadStatementGlobalRpt.RegionID} =0 )", sampleData);
 

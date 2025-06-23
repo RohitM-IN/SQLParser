@@ -164,9 +164,13 @@ function DevExpressConverter() {
         if (includeExtradata)
             comparison = [left, operatorToken, right, { type: originalOperator }, right];
 
-        // Last null because of special case when using dropdown it https://github.com/DevExpress/DevExtreme/blob/25_1/packages/devextreme/js/__internal/data/m_utils.ts#L18 it takes last value as null
-        if ((ast.left && isFunctionNullCheck(ast.left, true)) || (ast.value && isFunctionNullCheck(ast.value, false))) {
+        let isLeftNullCheck = isFunctionNullCheck(ast.left, true);
+        let isRightNullCheck = isFunctionNullCheck(ast.right, false) || (ast.value && isFunctionNullCheck(ast.value, false));
+        let isBothNullChecks = isLeftNullCheck && isRightNullCheck;
+
+        if (!isBothNullChecks && isLeftNullCheck) {
             const nullCheckArg = (ast.left ?? ast.value).args[1]?.value;
+
             let baseComparison = comparison;
 
             if (Array.isArray(right) && (right.includes("or") || right.includes("and"))) {
@@ -174,18 +178,56 @@ function DevExpressConverter() {
                 baseComparison = [[left, operatorToken, valueRight], ...right];
             }
 
-            comparison = [baseComparison, 'or', [left, operatorToken, null, { type: "ISNULL", defaultValue: nullCheckArg }, null]];
-        } else if (ast.right && isFunctionNullCheck(ast.right, true)) {
-            const nullCheckArg = ast.right.args[1]?.value;
+            comparison = [[...baseComparison], 'or', [left, operatorToken, null, { type: "ISNULL", position: "column", defaultValue: nullCheckArg }, null]];
+
+        } else if (!isBothNullChecks && isRightNullCheck) {
+            const nullCheckArg = (ast.right ?? ast.value).args[1]?.value;
+
             let baseComparison = comparison;
 
-            if (Array.isArray(right) && (right.includes("or") || right.includes("and"))) {
-                const valueRight = right.shift();
-                baseComparison = [[left, operatorToken, valueRight], ...right];
+            if (Array.isArray(left) && (left.includes("or") || left.includes("and"))) {
+                const valueLeft = left.shift();
+                baseComparison = [[valueLeft, operatorToken, right], ...left];
             }
 
-            comparison = [baseComparison, 'or', [right, operatorToken, null, { type: "ISNULL", defaultValue: nullCheckArg }, null]];
+            comparison = [[...baseComparison], 'or', [left, operatorToken, null, { type: "ISNULL", position: "value", defaultValue: nullCheckArg }, null]];
+
+        } else if (isBothNullChecks) {
+            const nullCheckArgleft = (ast.left ?? ast.value).args[1]?.value;
+            const nullCheckArgright = (ast.right ?? ast.value).args[1]?.value;
+
+            let baseComparison = comparison;
+
+            if (Array.isArray(left) && (left.includes("or") || left.includes("and"))) {
+                const valueLeft = left.shift();
+                baseComparison = [[valueLeft, operatorToken, right], ...left];
+            }
+
+            comparison = [[...baseComparison, { type: "ISNULL", position: "both", defaultValue: nullCheckArgleft, defaultValueRight: nullCheckArgright }, baseComparison[2]], 'or', [left, operatorToken, null]];
+
         }
+        // Last null because of special case when using dropdown it https://github.com/DevExpress/DevExtreme/blob/25_1/packages/devextreme/js/__internal/data/m_utils.ts#L18 it takes last value as null
+        // if ((ast.left && isFunctionNullCheck(ast.left, true)) || (ast.value && isFunctionNullCheck(ast.value, false))) {
+        //     const nullCheckArg = (ast.left ?? ast.value).args[1]?.value;
+        //     let baseComparison = comparison;
+
+        //     if (Array.isArray(right) && (right.includes("or") || right.includes("and"))) {
+        //         const valueRight = right.shift();
+        //         baseComparison = [[left, operatorToken, valueRight], ...right];
+        //     }
+
+        //     comparison = [baseComparison, 'or', [left, operatorToken, null, { type: "ISNULL", defaultValue: nullCheckArg }, null]];
+        // } else if (ast.right && isFunctionNullCheck(ast.right, true)) {
+        //     const nullCheckArg = ast.right.args[1]?.value;
+        //     let baseComparison = comparison;
+
+        //     if (Array.isArray(right) && (right.includes("or") || right.includes("and"))) {
+        //         const valueRight = right.shift();
+        //         baseComparison = [[left, operatorToken, valueRight], ...right];
+        //     }
+
+        //     comparison = [baseComparison, 'or', [right, operatorToken, null, { type: "ISNULL", defaultValue: nullCheckArg }, null]];
+        // }
 
         // Apply short-circuit evaluation if enabled
         if (EnableShortCircuit && IsValueNullShortCircuit && (left == null || right == null)) {
