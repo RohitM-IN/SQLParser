@@ -26,7 +26,7 @@
 //     const astTree = parsedResult.ast;
 //     console.log("AST Tree:", JSON.stringify(astTree, null, 2), "\n");
 
-//     return convertToDevExpressFormat({ ast: astTree, resultObject: sampleData, isValueNullShortCircuit: true });
+//     return convertToDevExpressFormat({ ast: astTree, resultObject: sampleData, options: { isValueNullShortCircuit: true, treatNumberAsNullableBit: true } });
 // }
 
 // const devexpress = parseFilterString("ISNULL(CompanyID,0) = ISNULL({TransferOutwardDocument.CompanyID},0) OR ISNULL(CompanyID,0) = 0", sampleData);

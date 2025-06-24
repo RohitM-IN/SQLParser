@@ -167,67 +167,58 @@ function DevExpressConverter() {
         let isLeftNullCheck = isFunctionNullCheck(ast.left, true);
         let isRightNullCheck = isFunctionNullCheck(ast.right, false) || (ast.value && isFunctionNullCheck(ast.value, false));
         let isBothNullChecks = isLeftNullCheck && isRightNullCheck;
-
+        let isdestructured = false;
+        // Last null because of special case when using dropdown it https://github.com/DevExpress/DevExtreme/blob/25_1/packages/devextreme/js/__internal/data/m_utils.ts#L18 it takes last value.
         if (!isBothNullChecks && isLeftNullCheck) {
             const nullCheckArg = (ast.left ?? ast.value).args[1]?.value;
+            let valueRight = null
 
             let baseComparison = comparison;
 
             if (Array.isArray(right) && (right.includes("or") || right.includes("and"))) {
-                const valueRight = right.shift();
+                isdestructured = true;
+                valueRight = right.shift();
                 baseComparison = [[left, operatorToken, valueRight], ...right];
             }
+            const _val = !isdestructured ? baseComparison[2] : valueRight;
+            if (normalizeBool(_val) == normalizeBool(nullCheckArg))
+                comparison = [[...baseComparison], 'or', [left, operatorToken, null, { type: "ISNULL", position: "column", defaultValue: nullCheckArg }, null]];
+            else
+                comparison = [...baseComparison, { type: "ISNULL", position: "column", defaultValue: nullCheckArg }, _val];
 
-            comparison = [[...baseComparison], 'or', [left, operatorToken, null, { type: "ISNULL", position: "column", defaultValue: nullCheckArg }, null]];
 
         } else if (!isBothNullChecks && isRightNullCheck) {
             const nullCheckArg = (ast.right ?? ast.value).args[1]?.value;
-
+            let valueLeft = null
             let baseComparison = comparison;
 
             if (Array.isArray(left) && (left.includes("or") || left.includes("and"))) {
-                const valueLeft = left.shift();
+                isdestructured = true;
+                valueLeft = left.shift();
                 baseComparison = [[valueLeft, operatorToken, right], ...left];
             }
+            const _val = !isdestructured ? baseComparison[2] : valueRight;
 
-            comparison = [[...baseComparison], 'or', [left, operatorToken, null, { type: "ISNULL", position: "value", defaultValue: nullCheckArg }, null]];
-
+            comparison = [...baseComparison, { type: "ISNULL", position: "value", defaultValue: nullCheckArg }, _val];
         } else if (isBothNullChecks) {
             const nullCheckArgleft = (ast.left ?? ast.value).args[1]?.value;
             const nullCheckArgright = (ast.right ?? ast.value).args[1]?.value;
-
+            let valueLeft = null;
             let baseComparison = comparison;
 
             if (Array.isArray(left) && (left.includes("or") || left.includes("and"))) {
-                const valueLeft = left.shift();
+                isdestructured = true;
+                valueLeft = left.shift();
                 baseComparison = [[valueLeft, operatorToken, right], ...left];
             }
 
-            comparison = [[...baseComparison, { type: "ISNULL", position: "both", defaultValue: nullCheckArgleft, defaultValueRight: nullCheckArgright }, baseComparison[2]], 'or', [left, operatorToken, null]];
+            const _val = !isdestructured ? baseComparison[2] : valueLeft;
 
+            if (normalizeBool(nullCheckArgleft) == normalizeBool(nullCheckArgright))
+                comparison = [[...baseComparison, { type: "ISNULL", position: "both", defaultValue: nullCheckArgleft, defaultValueRight: nullCheckArgright }, _val], 'or', [left, operatorToken, null]];
+            else
+                comparison = [[...baseComparison, { type: "ISNULL", position: "both", defaultValue: nullCheckArgleft, defaultValueRight: nullCheckArgright }, _val]];
         }
-        // Last null because of special case when using dropdown it https://github.com/DevExpress/DevExtreme/blob/25_1/packages/devextreme/js/__internal/data/m_utils.ts#L18 it takes last value as null
-        // if ((ast.left && isFunctionNullCheck(ast.left, true)) || (ast.value && isFunctionNullCheck(ast.value, false))) {
-        //     const nullCheckArg = (ast.left ?? ast.value).args[1]?.value;
-        //     let baseComparison = comparison;
-
-        //     if (Array.isArray(right) && (right.includes("or") || right.includes("and"))) {
-        //         const valueRight = right.shift();
-        //         baseComparison = [[left, operatorToken, valueRight], ...right];
-        //     }
-
-        //     comparison = [baseComparison, 'or', [left, operatorToken, null, { type: "ISNULL", defaultValue: nullCheckArg }, null]];
-        // } else if (ast.right && isFunctionNullCheck(ast.right, true)) {
-        //     const nullCheckArg = ast.right.args[1]?.value;
-        //     let baseComparison = comparison;
-
-        //     if (Array.isArray(right) && (right.includes("or") || right.includes("and"))) {
-        //         const valueRight = right.shift();
-        //         baseComparison = [[left, operatorToken, valueRight], ...right];
-        //     }
-
-        //     comparison = [baseComparison, 'or', [right, operatorToken, null, { type: "ISNULL", defaultValue: nullCheckArg }, null]];
-        // }
 
         // Apply short-circuit evaluation if enabled
         if (EnableShortCircuit && IsValueNullShortCircuit && (left == null || right == null)) {
@@ -258,6 +249,20 @@ function DevExpressConverter() {
 
         return comparison;
     }
+
+    /**
+     * Normalizes numeric boolean-like values to actual booleans.
+     *
+     * Converts the number `0` to `false` and `1` to `true`.
+     * If the input is not exactly `0` or `1`, it returns the value unchanged.
+     *
+     * @param {*} value - The value to normalize. Can be of any type.
+     * @returns {*} - Returns `false` if `value` is `0`, `true` if `value` is `1`, otherwise returns the original value.
+     */
+    function normalizeBool(value) {
+        return value === 0 || value === 1 ? Boolean(value) : value;
+    }
+
 
     /**
      * Handles function calls, focusing on ISNULL.

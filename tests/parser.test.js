@@ -137,15 +137,15 @@ describe("Parser SQL to dx Filter Builder", () => {
         {
             input: "ISNULL(SourceID,0) = {ServiceOrderDocument.SourceID} OR ISNULL(SourceID,0) = 0",
             expected: [
-                ["SourceID", "=", 2],
+                ["SourceID", "=", 2, { "defaultValue": 0, "position": "column", "type": "ISNULL" }, 2],
                 "or",
-                ["SourceID", "=", null, { "defaultValue": 0, "position": "column", "type": "ISNULL" }, null],
-                "or",
-                ["SourceID", "=", 0],
-                "or",
-                ["SourceID", "=", null, { "defaultValue": 0, "position": "column", "type": "ISNULL" }, null],
-                "or",
-                ["SourceID", "=", false]
+                [
+                    ["SourceID", "=", 0],
+                    "or",
+                    ["SourceID", "=", null, { "defaultValue": 0, "position": "column", "type": "ISNULL" }, null],
+                    "or",
+                    ["SourceID", "=", false]
+                ]
             ]
         },
         {
@@ -163,11 +163,13 @@ describe("Parser SQL to dx Filter Builder", () => {
                     ]
                 ],
                 "and",
-                [
-                    ["IsSubdealer", "=", true],
-                    "or",
-                    ["IsSubdealer", "=", null, { "defaultValue": 0, "position": "column", "type": "ISNULL" }, null]
-                ]
+                // [
+                // ["IsSubdealer", "=", 0],
+                // "or",
+                // ["IsSubdealer", "=", null, { "defaultValue": 0, "position": "column", "type": "ISNULL" }, null],
+                // "or",
+                ["IsSubdealer", "=", true, { "defaultValue": 0, "position": "column", "type": "ISNULL" }, true],
+                // ]
             ]
         },
         {
@@ -199,15 +201,15 @@ describe("Parser SQL to dx Filter Builder", () => {
         {
             input: "CompanyID = ISNULL({LeadDocument.CompanyID},0) OR (ISNULL(CompanyID,0) = 0))",
             expected: [
-                ["CompanyID", "=", 7],
+                ["CompanyID", "=", 7, { "type": "ISNULL", "position": "value", "defaultValue": 0 }, 7],
                 "or",
-                ["CompanyID", "=", null, { "type": "ISNULL", "position": "value", "defaultValue": 0 }, null],
-                "or",
-                ["CompanyID", "=", 0],
-                "or",
-                ["CompanyID", "=", null, { "type": "ISNULL", "position": "column", "defaultValue": 0 }, null],
-                "or",
-                ["CompanyID", "=", false]
+                [
+                    ["CompanyID", "=", 0],
+                    "or",
+                    ["CompanyID", "=", null, { "type": "ISNULL", "position": "column", "defaultValue": 0 }, null],
+                    "or",
+                    ["CompanyID", "=", false]
+                ]
             ]
         },
         {
@@ -316,6 +318,76 @@ describe("Parser SQL to dx Filter Builder", () => {
                 ["CompanyID", "=", null, { "type": "ISNULL", "position": "column", "defaultValue": 0 }, null],
                 "or",
                 ["CompanyID", "=", false]
+            ]
+        },
+        {
+            input: "ISNULL(CompanyID,0) = ISNULL({TransferOutwardDocument.CompanyID},0) OR (ISNULL(CompanyID,1) = 0)",
+            expected: [
+                ["CompanyID", "=", 7, { "type": "ISNULL", "position": "both", "defaultValue": 0, "defaultValueRight": 0 }, 7],
+                "or",
+                ["CompanyID", "=", null],
+                "or",
+                ["CompanyID", "=", 0, { "type": "ISNULL", "position": "column", "defaultValue": 1 }, 0],
+                "or",
+                ["CompanyID", "=", false]
+            ]
+        },
+        {
+            input: "ISNULL(CompanyID,0) = {LeadDocument.CompanyID}",
+            expected: [
+                "CompanyID", "=", 7, { "type": "ISNULL", "position": "column", "defaultValue": 0 }, 7
+            ]
+        },
+        {
+            input: "ISNULL(CompanyID,0) = ISNULL({LeadDocument.CompanyID},0)",
+            expected: [
+                ["CompanyID", "=", 7, { "type": "ISNULL", "position": "both", "defaultValue": 0, "defaultValueRight": 0 }, 7],
+                "or",
+                ["CompanyID", "=", null]
+            ]
+        },
+        {
+            input: "ISNULL(CompanyID,1) = ISNULL({LeadDocument.CompanyID},2)",
+            expected: [
+                "CompanyID", "=", 7, { "type": "ISNULL", "position": "both", "defaultValue": 1, "defaultValueRight": 2 }, 7
+            ]
+        },
+        {
+            input: "CompanyID = ISNULL({LeadDocument.CompanyID},0)",
+            expected: [
+                "CompanyID", "=", 7, { "type": "ISNULL", "position": "value", "defaultValue": 0 }, 7
+            ]
+        },
+        {
+            input: "AllowSubDealer = ISNULL({LeadDocument.AllowSubDealer},0)",
+            expected: [
+                "AllowSubDealer", "=", true, { "type": "ISNULL", "position": "value", "defaultValue": 0 }, true
+            ]
+        },
+        {
+            input: "AllowSubDealer = ISNULL({LeadDocument.AllowSubDealer},1)",
+            expected: [
+                "AllowSubDealer", "=", true, { "type": "ISNULL", "position": "value", "defaultValue": 1 }, true
+            ]
+        },
+        {
+            input: "ISNULL(AllowSubDealer,0) = ISNULL({LeadDocument.AllowSubDealer},1)",
+            expected: [
+                "AllowSubDealer", "=", true, { "type": "ISNULL", "position": "both", "defaultValue": 0, "defaultValueRight": 1 }, true
+            ]
+        },
+        {
+            input: "ISNULL(AllowSubDealer,0) = {LeadDocument.AllowSubDealer}",
+            expected: [
+                "AllowSubDealer", "=", true, { "type": "ISNULL", "position": "column", "defaultValue": 0 }, true
+            ]
+        },
+        {
+            input: "ISNULL(AllowSubDealer,1) = {LeadDocument.AllowSubDealer}",
+            expected: [
+                ["AllowSubDealer", "=", true],
+                'or',
+                ["AllowSubDealer", "=", null, { "type": "ISNULL", "position": "column", "defaultValue": 1 }, null]
             ]
         }
     ];
