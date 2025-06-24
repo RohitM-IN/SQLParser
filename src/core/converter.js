@@ -33,6 +33,9 @@ function DevExpressConverter() {
         // Handle special cases for short circuit
         if (result === true || result === false || result === null) return [];
 
+        if (result.length == 1) {
+            return result[0];
+        }
         return result;
     }
 
