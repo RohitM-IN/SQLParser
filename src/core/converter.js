@@ -33,7 +33,7 @@ function DevExpressConverter() {
         // Handle special cases for short circuit
         if (result === true || result === false || result === null) return [];
 
-        return processAstNode(ast);
+        return result;
     }
 
     /**
