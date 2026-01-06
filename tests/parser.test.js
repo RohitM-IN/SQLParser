@@ -388,6 +388,18 @@ describe("Parser SQL to dx Filter Builder", () => {
                 ["AllowSubDealer", "=", true],
                 'or',
                 ["AllowSubDealer", "=", null, { "type": "ISNULL", "position": "column", "defaultValue": 1 }, null]
+            ],
+        },
+        {
+            input: "(CompanyID = {LeadDocument.CompanyID} OR CompanyID IS NULL) AND ItemGroupType IN ({Item.AllowedItemGroupTypeOne}) AND ({PurchaseOrderDocument.IsMultiBrand} = 0 OR ({PurchaseOrderDocument.IsMultiBrand} = 1 AND Make IN ({PurchaseOrderDocument.AllowedApplicableMake})))",
+            expected: [
+                [
+                    ["CompanyID", "=", 7],
+                    "or",
+                    ["CompanyID", "=", null, { "type": "IS" }, null]
+                ],
+                "and",
+                ["ItemGroupType", "=", "1"]
             ]
         }
     ];
@@ -428,6 +440,7 @@ describe("Parser SQL to dx Filter Builder", () => {
 
 
 const sampleData = {
+    "Example.ZeroValue": 0,
     "CoreEntity0022.CompanyGroupID": 42,
     "CoreEntity0022.BranchID": 7,
     "Employee.District": 0,
@@ -441,6 +454,7 @@ const sampleData = {
     "Item.ID": 42,
     "Item.BranchID": 7,
     "Item.AllowedItemGroupType": "1,2",
+    "Item.AllowedItemGroupTypeOne": "1",
     "WorkOrderLine.ApplicableUoms": ["UOM1", "UOM2", "UOM3"],
     "WorkOrderLine.CompanyID": 2,
     "WorkOrderDocument.CompanyID": 42,
@@ -456,4 +470,6 @@ const sampleData = {
     "SaleOrderStatusStmtGlobalRpt.StateID": null,
     "SaleOrderStatusStmtGlobalRpt.RegionID": null,
     "WorkOrderLine.CompanyIDs": ["0,1"],
+    "PurchaseOrderDocument.IsMultiBrand": false,
+    "PurchaseOrderDocument.AllowedApplicableMake": "0"
 };

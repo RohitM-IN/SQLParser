@@ -518,13 +518,17 @@ function DevExpressConverter() {
             return null; // Any comparison with null should return null
         }
 
+        // Normalize boolean values to numbers for comparison with numbers
+        const normalizedLeft = normalizeBool(left);
+        const normalizedRight = normalizeBool(right);
+
         switch (operator) {
-            case '=': case '==': return left === right;
-            case '<>': case '!=': return left !== right;
-            case '>': return left > right;
-            case '>=': return left >= right;
-            case '<': return left < right;
-            case '<=': return left <= right;
+            case '=': case '==': return normalizedLeft === normalizedRight;
+            case '<>': case '!=': return normalizedLeft !== normalizedRight;
+            case '>': return normalizedLeft > normalizedRight;
+            case '>=': return normalizedLeft >= normalizedRight;
+            case '<': return normalizedLeft < normalizedRight;
+            case '<=': return normalizedLeft <= normalizedRight;
             default: return null; // Invalid operator
         }
     }
