@@ -401,6 +401,12 @@ describe("Parser SQL to dx Filter Builder", () => {
                 "and",
                 ["ItemGroupType", "=", "1"]
             ]
+        },
+        {
+            input: "AccountID = {AccountingRule.CompanyId}",
+            expected: [
+                "AccountID", "=", 42
+            ]
         }
     ];
 

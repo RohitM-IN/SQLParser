@@ -402,8 +402,11 @@ function DevExpressConverter() {
     function resolvePlaceholderFromResultObject(placeholder) {
         if (!resultObject) return `{${placeholder}}`;
 
+        // Case-insensitive lookup
+        const lowerPlaceholder = placeholder.toLowerCase();
+        const matchingKey = Object.keys(resultObject).find(key => key.toLowerCase() === lowerPlaceholder);
 
-        return resultObject.hasOwnProperty(placeholder) ? resultObject[placeholder] : `{${placeholder.value ?? placeholder}}`;
+        return matchingKey ? resultObject[matchingKey] : `{${placeholder.value ?? placeholder}}`;
     }
 
     /**
