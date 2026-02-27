@@ -407,6 +407,8 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 "AccountID", "=", 42
             ]
+            input: "ID IN ({SampleDoc.AuthFilterID})",
+            expected: []
         }
     ];
 
@@ -478,4 +480,5 @@ const sampleData = {
     "WorkOrderLine.CompanyIDs": ["0,1"],
     "PurchaseOrderDocument.IsMultiBrand": false,
     "PurchaseOrderDocument.AllowedApplicableMake": "0"
+    "SampleDoc.AuthFilterID": "ID"
 };
