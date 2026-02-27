@@ -38,6 +38,9 @@ export function convertSQLToAst(filterString: string, enableConsoleLogs?: boolea
 export function convertAstToDevextreme(
     ast: ASTNode,
     state?: ResultObject | null,
-    enableShortCircuit?: boolean,
-    isValueNullShortCircuit?: boolean
+    options?: {
+        enableShortCircuit?: boolean;
+        isValueNullShortCircuit?: boolean;
+        treatNumberAsNullableBit?: boolean;
+    }
 ): DevExpressFilter;

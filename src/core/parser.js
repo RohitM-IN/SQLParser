@@ -106,6 +106,21 @@ export function parse(input, variables = []) {
 				return { type: "logical", operator, left: { type: "function", name: functionName, args: functionArgs }, right: rightOperand };
 			}
 
+			if (rightOperand.type === "logical" && nodeType === "comparison") {
+				return {
+					type: "logical",
+					left: {
+						type: "comparison",
+						left: { type: "function", name: functionName, args: functionArgs },
+						operator: operator,
+						right: rightOperand.left
+					},
+					operator: rightOperand.operator,
+					right: rightOperand.right
+
+				}
+			}
+
 			return {
 				type: "comparison",
 				left: { type: "function", name: functionName, args: functionArgs },
@@ -134,11 +149,10 @@ export function parse(input, variables = []) {
 					operator: operator,
 					value: rightList
 				};
-			}
-
-			if (LOGICAL_OPERATORS.includes(operator.toLowerCase())) {
+			} else if (LOGICAL_OPERATORS.includes(operator.toLowerCase())) {
 				// Recursively parse the right-hand expression with adjusted precedence
-				const right = parseExpression(OPERATOR_PRECEDENCE[operator]);
+				// Add 1 to ensure left-associativity for operators of the same precedence
+				const right = parseExpression(OPERATOR_PRECEDENCE[operator] + 1);
 				left = { type: "logical", operator, left, right };
 			} else if (currentToken?.type == "identifier") {
 				const right = parseValue(operator);
@@ -173,7 +187,32 @@ export function parse(input, variables = []) {
 		}
 
 		// Handle function calls like ISNULL(field)
-		if (currentToken.type === "function") return parseFunction();
+		if (currentToken.type === "function") {
+			const functionNode = parseFunction();
+
+			// Check if the function is followed by a comparison operator
+			if (currentToken && currentToken.type === "operator" && !LOGICAL_OPERATORS.includes(currentToken.value.toLowerCase())) {
+				const operator = currentToken.value.toLowerCase();
+				const originalOperator = currentToken.originalValue;
+				next();
+
+				if (operator === "between") {
+					return parseBetweenComparison(functionNode, operator);
+				}
+
+				const value = parseValue(operator);
+
+				return {
+					type: "comparison",
+					field: functionNode,
+					operator,
+					value,
+					originalOperator
+				};
+			}
+
+			return functionNode;
+		}
 
 		// Handle literal values (numbers, strings, null)
 		if (LITERALS.includes(currentToken.type)) {
@@ -186,7 +225,7 @@ export function parse(input, variables = []) {
 		const field = parseValue();
 
 		// Check if it's part of a comparison expression
-		if (currentToken && currentToken.type === "operator") {
+		if (currentToken && currentToken.type === "operator" && !LOGICAL_OPERATORS.includes(currentToken.value.toLowerCase())) {
 			const operator = currentToken.value.toLowerCase();
 			const originalOperator = currentToken.originalValue;
 			next();

@@ -9,19 +9,23 @@ function DevExpressConverter() {
     let resultObject = null;
     let EnableShortCircuit = true;
     let IsValueNullShortCircuit = false; // Flag to enable/disable null short-circuiting
+    let TreatNumberAsNullableBit = false; // Flag to enable/disable optional boolean with number conversion
 
     /**
    * Main conversion function that sets up the global context
    * @param {Object} ast - The abstract syntax tree
    * @param {Object} ResultObject - Optional object for placeholder resolution
    * @param {boolean} enableShortCircuit - Optional enabling and disabling the shortcircuit ie evaluating value = value scenario 
+   * @param {boolean} isValueNullShortCircuit - Optional enabling and disabling the null shortcircuit ie evaluating value = null scenario
+   * @param {boolean} treatNumberAsNullableBit - Optional enabling and disabling the optional boolean with number conversion
    * @returns {Array|null} DevExpress format filter
    */
-    function convert(ast, ResultObject = null, enableShortCircuit = true, isValueNullShortCircuit = false) {
+    function convert(ast, ResultObject = null, enableShortCircuit = true, isValueNullShortCircuit = false, treatNumberAsNullableBit = false) {
         // Set up global context
         resultObject = ResultObject;
         EnableShortCircuit = enableShortCircuit;
         IsValueNullShortCircuit = isValueNullShortCircuit;
+        TreatNumberAsNullableBit = treatNumberAsNullableBit;
 
         // Process the AST
         let result = processAstNode(ast);
@@ -29,7 +33,10 @@ function DevExpressConverter() {
         // Handle special cases for short circuit
         if (result === true || result === false || result === null) return [];
 
-        return processAstNode(ast);
+        if (result.length == 1) {
+            return result[0];
+        }
+        return result;
     }
 
     /**
@@ -107,8 +114,8 @@ function DevExpressConverter() {
 
         // Detect and flatten nested logical expressions
         if (parentOperator === null) {
-            if (left.length === 3 && LOGICAL_OPERATORS.includes(left[1])) parentOperator = left[1];
-            if (right.length === 3 && LOGICAL_OPERATORS.includes(right[1])) parentOperator = right[1];
+            if (left && left.length === 3 && LOGICAL_OPERATORS.includes(left[1])) parentOperator = left[1];
+            if (right && right.length === 3 && LOGICAL_OPERATORS.includes(right[1])) parentOperator = right[1];
         }
 
         // Flatten nested logical expressions if applicable
@@ -156,14 +163,64 @@ function DevExpressConverter() {
             includeExtradata = true;
         }
         let comparison = [left, operatorToken, right];
+
         if (includeExtradata)
             comparison = [left, operatorToken, right, { type: originalOperator }, right];
 
-        // Last null because of special case when using dropdown it https://github.com/DevExpress/DevExtreme/blob/25_1/packages/devextreme/js/__internal/data/m_utils.ts#L18 it takes last value as null
-        if ((ast.left && isFunctionNullCheck(ast.left, true)) || (ast.value && isFunctionNullCheck(ast.value, false))) {
-            comparison = [[left, operatorToken, right], 'or', [left, operatorToken, null, { type: "ISNULL", defaultValue: (ast.left ?? ast.value).args[1]?.value }, null]];
-        } else if (ast.right && isFunctionNullCheck(ast.right, true)) {
-            comparison = [[left, operatorToken, right], 'or', [right, operatorToken, null, { type: "ISNULL", defaultValue: ast.right.args[1]?.value }, null]];
+        let isLeftNullCheck = isFunctionNullCheck(ast.left, true);
+        let isRightNullCheck = isFunctionNullCheck(ast.right, false) || (ast.value && isFunctionNullCheck(ast.value, false));
+        let isBothNullChecks = isLeftNullCheck && isRightNullCheck;
+        let isdestructured = false;
+        // Last null because of special case when using dropdown it https://github.com/DevExpress/DevExtreme/blob/25_1/packages/devextreme/js/__internal/data/m_utils.ts#L18 it takes last value.
+        if (!isBothNullChecks && isLeftNullCheck) {
+            const nullCheckArg = (ast.left ?? ast.value).args[1]?.value;
+            let valueRight = null
+
+            let baseComparison = comparison;
+
+            if (Array.isArray(right) && (right.includes("or") || right.includes("and"))) {
+                isdestructured = true;
+                valueRight = right.shift();
+                baseComparison = [[left, operatorToken, valueRight], ...right];
+            }
+            const _val = !isdestructured ? baseComparison[2] : valueRight;
+            if (normalizeBool(_val) == normalizeBool(nullCheckArg))
+                comparison = [[...baseComparison], 'or', [left, operatorToken, null, { type: "ISNULL", position: "column", defaultValue: nullCheckArg }, null]];
+            else
+                comparison = [...baseComparison, { type: "ISNULL", position: "column", defaultValue: nullCheckArg }, _val];
+
+
+        } else if (!isBothNullChecks && isRightNullCheck) {
+            const nullCheckArg = (ast.right ?? ast.value).args[1]?.value;
+            let valueLeft = null
+            let baseComparison = comparison;
+
+            if (Array.isArray(left) && (left.includes("or") || left.includes("and"))) {
+                isdestructured = true;
+                valueLeft = left.shift();
+                baseComparison = [[valueLeft, operatorToken, right], ...left];
+            }
+            const _val = !isdestructured ? baseComparison[2] : valueRight;
+
+            comparison = [...baseComparison, { type: "ISNULL", position: "value", defaultValue: nullCheckArg }, _val];
+        } else if (isBothNullChecks) {
+            const nullCheckArgleft = (ast.left ?? ast.value).args[1]?.value;
+            const nullCheckArgright = (ast.right ?? ast.value).args[1]?.value;
+            let valueLeft = null;
+            let baseComparison = comparison;
+
+            if (Array.isArray(left) && (left.includes("or") || left.includes("and"))) {
+                isdestructured = true;
+                valueLeft = left.shift();
+                baseComparison = [[valueLeft, operatorToken, right], ...left];
+            }
+
+            const _val = !isdestructured ? baseComparison[2] : valueLeft;
+
+            if (normalizeBool(nullCheckArgleft) == normalizeBool(nullCheckArgright))
+                comparison = [[...baseComparison, { type: "ISNULL", position: "both", defaultValue: nullCheckArgleft, defaultValueRight: nullCheckArgright }, _val], 'or', [left, operatorToken, null]];
+            else
+                comparison = [[...baseComparison, { type: "ISNULL", position: "both", defaultValue: nullCheckArgleft, defaultValueRight: nullCheckArgright }, _val]];
         }
 
         // Apply short-circuit evaluation if enabled
@@ -176,8 +233,39 @@ function DevExpressConverter() {
             if (isAlwaysFalse(comparison, leftDefault, rightDefault)) return false;
         }
 
+        if (TreatNumberAsNullableBit && typeof right === "number" && (right == 0 || right == 1)) {
+
+            if (Array.isArray(comparison[0])) {
+                return [
+                    ...comparison,
+                    'or',
+                    [left, operatorToken, right == true]
+                ];
+            }
+
+            return [
+                [...comparison],
+                'or',
+                [left, operatorToken, right == true]
+            ];
+        }
+
         return comparison;
     }
+
+    /**
+     * Normalizes numeric boolean-like values to actual booleans.
+     *
+     * Converts the number `0` to `false` and `1` to `true`.
+     * If the input is not exactly `0` or `1`, it returns the value unchanged.
+     *
+     * @param {*} value - The value to normalize. Can be of any type.
+     * @returns {*} - Returns `false` if `value` is `0`, `true` if `value` is `1`, otherwise returns the original value.
+     */
+    function normalizeBool(value) {
+        return value === 0 || value === 1 ? Boolean(value) : value;
+    }
+
 
     /**
      * Handles function calls, focusing on ISNULL.
@@ -321,8 +409,11 @@ function DevExpressConverter() {
     function resolvePlaceholderFromResultObject(placeholder) {
         if (!resultObject) return `{${placeholder}}`;
 
+        // Case-insensitive lookup
+        const lowerPlaceholder = placeholder.toLowerCase();
+        const matchingKey = Object.keys(resultObject).find(key => key.toLowerCase() === lowerPlaceholder);
 
-        return resultObject.hasOwnProperty(placeholder) ? resultObject[placeholder] : `{${placeholder.value ?? placeholder}}`;
+        return matchingKey ? resultObject[matchingKey] : `{${placeholder.value ?? placeholder}}`;
     }
 
     /**
@@ -437,13 +528,17 @@ function DevExpressConverter() {
             return null; // Any comparison with null should return null
         }
 
+        // Normalize boolean values to numbers for comparison with numbers
+        const normalizedLeft = normalizeBool(left);
+        const normalizedRight = normalizeBool(right);
+
         switch (operator) {
-            case '=': case '==': return left === right;
-            case '<>': case '!=': return left !== right;
-            case '>': return left > right;
-            case '>=': return left >= right;
-            case '<': return left < right;
-            case '<=': return left <= right;
+            case '=': case '==': return normalizedLeft === normalizedRight;
+            case '<>': case '!=': return normalizedLeft !== normalizedRight;
+            case '>': return normalizedLeft > normalizedRight;
+            case '>=': return normalizedLeft >= normalizedRight;
+            case '<': return normalizedLeft < normalizedRight;
+            case '<=': return normalizedLeft <= normalizedRight;
             default: return null; // Invalid operator
         }
     }
@@ -459,10 +554,13 @@ const devExpressConverter = DevExpressConverter();
  * Converts an abstract syntax tree to DevExpress format
  * @param {Object} ast - The abstract syntax tree
  * @param {Object} resultObject - Optional object for placeholder resolution
- * @param {string} enableShortCircuit - Optional enabling and disabling the shortcircuit ie evaluating value = value scenario 
- * @param {boolean} isValueNullShortCircuit - Optional enabling and disabling the null shortcircuit ie evaluating value = null scenario
+ * @param {Object} options - Optional options for conversion
+ * @param {boolean} options.enableShortCircuit - Enable or disable short-circuit evaluation
+ * @param {boolean} options.isValueNullShortCircuit - Enable or disable null short-circuit evaluation
+ * @param {boolean} options.treatNumberAsNullableBit  - Enable or disable optional boolean with number conversion
  * @returns {Array|null} DevExpress format filter
  */
-export function convertToDevExpressFormat({ ast, resultObject = null, enableShortCircuit = true, isValueNullShortCircuit = false }) {
-    return devExpressConverter.init(ast, resultObject, enableShortCircuit, isValueNullShortCircuit);
+export function convertToDevExpressFormat({ ast, resultObject = null, options = {} }) {
+    const { enableShortCircuit = true, isValueNullShortCircuit = false, treatNumberAsNullableBit = false } = options;
+    return devExpressConverter.init(ast, resultObject, enableShortCircuit, isValueNullShortCircuit, treatNumberAsNullableBit);
 }

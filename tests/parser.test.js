@@ -71,18 +71,20 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 [
                     [
-                        ["FromDate", "<=", "2022-01-01"],
-                        'and',
-                        ["ToDate", ">=", "2022-01-01"]
+                        [
+                            ["FromDate", "<=", "2022-01-01"],
+                            'and',
+                            ["ToDate", ">=", "2022-01-01"]
+                        ],
+                        'or',
+                        ["ToDate", "=", null, { "type": "IS" }, null]
                     ],
-                    'or',
-                    ["ToDate", "=", null, { "type": "IS" }, null]
-                ],
-                "and",
-                [
-                    ["BranchID", "=", 42],
-                    "or",
-                    ["RefBranchID", "=", null, { "type": "IS" }, null]
+                    "and",
+                    [
+                        ["BranchID", "=", 42],
+                        "or",
+                        ["RefBranchID", "=", null, { "type": "IS" }, null]
+                    ]
                 ],
                 "and",
                 [
@@ -135,13 +137,15 @@ describe("Parser SQL to dx Filter Builder", () => {
         {
             input: "ISNULL(SourceID,0) = {ServiceOrderDocument.SourceID} OR ISNULL(SourceID,0) = 0",
             expected: [
-                ["SourceID", "=", 2],
+                ["SourceID", "=", 2, { "defaultValue": 0, "position": "column", "type": "ISNULL" }, 2],
                 "or",
-                ["SourceID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null],
-                "or",
-                ["SourceID", "=", 0],
-                "or",
-                ["SourceID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null]
+                [
+                    ["SourceID", "=", 0],
+                    "or",
+                    ["SourceID", "=", null, { "defaultValue": 0, "position": "column", "type": "ISNULL" }, null],
+                    "or",
+                    ["SourceID", "=", false]
+                ]
             ]
         },
         {
@@ -153,15 +157,19 @@ describe("Parser SQL to dx Filter Builder", () => {
                     [
                         ["CompanyID", "=", 0],
                         "or",
-                        ["CompanyID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null]
+                        ["CompanyID", "=", null, { "defaultValue": 0, "position": "column", "type": "ISNULL" }, null],
+                        "or",
+                        ["CompanyID", "=", false]
                     ]
                 ],
                 "and",
-                [
-                    ["IsSubdealer", "=", true],
-                    "or",
-                    ["IsSubdealer", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null]
-                ]
+                // [
+                // ["IsSubdealer", "=", 0],
+                // "or",
+                // ["IsSubdealer", "=", null, { "defaultValue": 0, "position": "column", "type": "ISNULL" }, null],
+                // "or",
+                ["IsSubdealer", "=", true, { "defaultValue": 0, "position": "column", "type": "ISNULL" }, true],
+                // ]
             ]
         },
         {
@@ -185,22 +193,23 @@ describe("Parser SQL to dx Filter Builder", () => {
         {
             input: "(ISNULL(TicketID, 0) = ISNULL({SupportResolution.TicketID}, 0))",
             expected: [
-                ["TicketID", "=", 123],
+                ["TicketID", "=", 123, { "type": "ISNULL", "position": "both", "defaultValue": 0, "defaultValueRight": 0 }, 123],
                 "or",
-                ["TicketID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null]
+                ["TicketID", "=", null]
             ]
         },
         {
             input: "CompanyID = ISNULL({LeadDocument.CompanyID},0) OR (ISNULL(CompanyID,0) = 0))",
             expected: [
-                ["CompanyID", "=", 7],
+                ["CompanyID", "=", 7, { "type": "ISNULL", "position": "value", "defaultValue": 0 }, 7],
                 "or",
-                ["CompanyID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null],
-                "or",
-                ["CompanyID", "=", 0],
-                "or",
-                ["CompanyID", "=", null, { "defaultValue": 0, "type": "ISNULL" }, null]
-
+                [
+                    ["CompanyID", "=", 0],
+                    "or",
+                    ["CompanyID", "=", null, { "type": "ISNULL", "position": "column", "defaultValue": 0 }, null],
+                    "or",
+                    ["CompanyID", "=", false]
+                ]
             ]
         },
         {
@@ -290,6 +299,114 @@ describe("Parser SQL to dx Filter Builder", () => {
             ]
         },
         {
+            input: "IsChecked = 1",
+            expected: [
+                ["IsChecked", "=", 1],
+                "or",
+                ["IsChecked", "=", true]
+            ]
+        },
+        {
+            input: "ISNULL(CompanyID,0) = ISNULL({TransferOutwardDocument.CompanyID},0) OR (ISNULL(CompanyID,0) = 0)",
+            expected: [
+                ["CompanyID", "=", 7, { "type": "ISNULL", "position": "both", "defaultValue": 0, "defaultValueRight": 0 }, 7],
+                "or",
+                ["CompanyID", "=", null],
+                "or",
+                ["CompanyID", "=", 0],
+                "or",
+                ["CompanyID", "=", null, { "type": "ISNULL", "position": "column", "defaultValue": 0 }, null],
+                "or",
+                ["CompanyID", "=", false]
+            ]
+        },
+        {
+            input: "ISNULL(CompanyID,0) = ISNULL({TransferOutwardDocument.CompanyID},0) OR (ISNULL(CompanyID,1) = 0)",
+            expected: [
+                ["CompanyID", "=", 7, { "type": "ISNULL", "position": "both", "defaultValue": 0, "defaultValueRight": 0 }, 7],
+                "or",
+                ["CompanyID", "=", null],
+                "or",
+                ["CompanyID", "=", 0, { "type": "ISNULL", "position": "column", "defaultValue": 1 }, 0],
+                "or",
+                ["CompanyID", "=", false]
+            ]
+        },
+        {
+            input: "ISNULL(CompanyID,0) = {LeadDocument.CompanyID}",
+            expected: [
+                "CompanyID", "=", 7, { "type": "ISNULL", "position": "column", "defaultValue": 0 }, 7
+            ]
+        },
+        {
+            input: "ISNULL(CompanyID,0) = ISNULL({LeadDocument.CompanyID},0)",
+            expected: [
+                ["CompanyID", "=", 7, { "type": "ISNULL", "position": "both", "defaultValue": 0, "defaultValueRight": 0 }, 7],
+                "or",
+                ["CompanyID", "=", null]
+            ]
+        },
+        {
+            input: "ISNULL(CompanyID,1) = ISNULL({LeadDocument.CompanyID},2)",
+            expected: [
+                "CompanyID", "=", 7, { "type": "ISNULL", "position": "both", "defaultValue": 1, "defaultValueRight": 2 }, 7
+            ]
+        },
+        {
+            input: "CompanyID = ISNULL({LeadDocument.CompanyID},0)",
+            expected: [
+                "CompanyID", "=", 7, { "type": "ISNULL", "position": "value", "defaultValue": 0 }, 7
+            ]
+        },
+        {
+            input: "AllowSubDealer = ISNULL({LeadDocument.AllowSubDealer},0)",
+            expected: [
+                "AllowSubDealer", "=", true, { "type": "ISNULL", "position": "value", "defaultValue": 0 }, true
+            ]
+        },
+        {
+            input: "AllowSubDealer = ISNULL({LeadDocument.AllowSubDealer},1)",
+            expected: [
+                "AllowSubDealer", "=", true, { "type": "ISNULL", "position": "value", "defaultValue": 1 }, true
+            ]
+        },
+        {
+            input: "ISNULL(AllowSubDealer,0) = ISNULL({LeadDocument.AllowSubDealer},1)",
+            expected: [
+                "AllowSubDealer", "=", true, { "type": "ISNULL", "position": "both", "defaultValue": 0, "defaultValueRight": 1 }, true
+            ]
+        },
+        {
+            input: "ISNULL(AllowSubDealer,0) = {LeadDocument.AllowSubDealer}",
+            expected: [
+                "AllowSubDealer", "=", true, { "type": "ISNULL", "position": "column", "defaultValue": 0 }, true
+            ]
+        },
+        {
+            input: "ISNULL(AllowSubDealer,1) = {LeadDocument.AllowSubDealer}",
+            expected: [
+                ["AllowSubDealer", "=", true],
+                'or',
+                ["AllowSubDealer", "=", null, { "type": "ISNULL", "position": "column", "defaultValue": 1 }, null]
+            ],
+        },
+        {
+            input: "(CompanyID = {LeadDocument.CompanyID} OR CompanyID IS NULL) AND ItemGroupType IN ({Item.AllowedItemGroupTypeOne}) AND ({PurchaseOrderDocument.IsMultiBrand} = 0 OR ({PurchaseOrderDocument.IsMultiBrand} = 1 AND Make IN ({PurchaseOrderDocument.AllowedApplicableMake})))",
+            expected: [
+                [
+                    ["CompanyID", "=", 7],
+                    "or",
+                    ["CompanyID", "=", null, { "type": "IS" }, null]
+                ],
+                "and",
+                ["ItemGroupType", "=", "1"]
+            ]
+        },
+        {
+            input: "AccountID = {AccountingRule.CompanyId}",
+            expected: [
+                "AccountID", "=", 42
+            ]
             input: "ID IN ({SampleDoc.AuthFilterID})",
             expected: []
         }
@@ -314,7 +431,10 @@ describe("Parser SQL to dx Filter Builder", () => {
             const variables = astwithVariables.variables;
             const ast = astwithVariables.ast;
 
-            const result = convertAstToDevextreme(ast, sampleData, true, true);
+            const result = convertAstToDevextreme(ast, sampleData, {
+                isValueNullShortCircuit: true,
+                treatNumberAsNullableBit: true
+            });
 
             if (result == null || result == true || result == false) {
                 expect([]).toEqual(expected);
@@ -328,6 +448,7 @@ describe("Parser SQL to dx Filter Builder", () => {
 
 
 const sampleData = {
+    "Example.ZeroValue": 0,
     "CoreEntity0022.CompanyGroupID": 42,
     "CoreEntity0022.BranchID": 7,
     "Employee.District": 0,
@@ -341,6 +462,7 @@ const sampleData = {
     "Item.ID": 42,
     "Item.BranchID": 7,
     "Item.AllowedItemGroupType": "1,2",
+    "Item.AllowedItemGroupTypeOne": "1",
     "WorkOrderLine.ApplicableUoms": ["UOM1", "UOM2", "UOM3"],
     "WorkOrderLine.CompanyID": 2,
     "WorkOrderDocument.CompanyID": 42,
@@ -356,5 +478,7 @@ const sampleData = {
     "SaleOrderStatusStmtGlobalRpt.StateID": null,
     "SaleOrderStatusStmtGlobalRpt.RegionID": null,
     "WorkOrderLine.CompanyIDs": ["0,1"],
+    "PurchaseOrderDocument.IsMultiBrand": false,
+    "PurchaseOrderDocument.AllowedApplicableMake": "0"
     "SampleDoc.AuthFilterID": "ID"
 };
