@@ -220,6 +220,13 @@ function DevExpressConverter() {
             resolvedValue = resolvedValue.split(',').map(v => v.trim());
         }
 
+        // Short-circuit: Field being compared to itself (e.g., ID IN (ID))
+        if (EnableShortCircuit && typeof ast.field === 'string') {
+            if (typeof resolvedValue === 'string' && ast.field === resolvedValue) {
+                return operator === "IN" ? true : false;
+            }
+        }
+
         // handle short circuit evaluation for IN operator
         if (EnableShortCircuit && (LITERAL_TYPES.includes(ast.field?.type) && LITERAL_TYPES.includes(ast.value?.type))) {
             const fieldVal = convertValue(ast.field);

@@ -288,6 +288,10 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 "ID", "=", 2
             ]
+        },
+        {
+            input: "ID IN ({SampleDoc.AuthFilterID})",
+            expected: []
         }
     ];
 
@@ -352,4 +356,5 @@ const sampleData = {
     "SaleOrderStatusStmtGlobalRpt.StateID": null,
     "SaleOrderStatusStmtGlobalRpt.RegionID": null,
     "WorkOrderLine.CompanyIDs": ["0,1"],
+    "SampleDoc.AuthFilterID": "ID"
 };
