@@ -164,6 +164,15 @@ export function parse(input, variables = []) {
 					operator: newOperator,
 					left: { type: "field", value: right }
 				};
+			} else {
+				// Regular comparison where left is a parenthesized expression or function result
+				const right = parseValue(operator);
+				left = {
+					type: "comparison",
+					left: left,
+					operator: operator,
+					value: right
+				};
 			}
 		}
 

@@ -407,8 +407,40 @@ describe("Parser SQL to dx Filter Builder", () => {
             expected: [
                 "AccountID", "=", 42
             ]
+        },
+        {
             input: "ID IN ({SampleDoc.AuthFilterID})",
             expected: []
+        },
+        {
+            input: "ItemGroupType IN ({ItemPrice.AllowedItemGroupType}) AND ((ISNULL(IsNonStock,0))={ItemPrice.AllowedNonStock})  AND (CompanyID = {ItemPrice.CompanyID} OR {ItemPrice.CompanyID} = 0 OR ISNULL(CompanyID,0) = 0)",
+            expected: [
+                [
+                    [
+                        ["ItemGroupType", "=", "1"],
+                        "or",
+                        ["ItemGroupType", "=", "2"]
+                    ],
+                    "and",
+                    [
+                        ["IsNonStock", "=", 1, { "defaultValue": 0, "position": "column", "type": "ISNULL" }, 1],
+                        "or",
+                        ["IsNonStock", "=", true]
+                    ]
+                ],
+                "and",
+                [
+                    ["CompanyID", "=", 7],
+                    "or",
+                    [
+                        ["CompanyID", "=", 0],
+                        "or",
+                        ["CompanyID", "=", null, { "defaultValue": 0, "position": "column", "type": "ISNULL" }, null],
+                        "or",
+                        ["CompanyID", "=", false]
+                    ]
+                ]
+            ]
         }
     ];
 
@@ -479,6 +511,9 @@ const sampleData = {
     "SaleOrderStatusStmtGlobalRpt.RegionID": null,
     "WorkOrderLine.CompanyIDs": ["0,1"],
     "PurchaseOrderDocument.IsMultiBrand": false,
-    "PurchaseOrderDocument.AllowedApplicableMake": "0"
-    "SampleDoc.AuthFilterID": "ID"
+    "PurchaseOrderDocument.AllowedApplicableMake": "0",
+    "SampleDoc.AuthFilterID": "ID",
+        "ItemPrice.AllowedItemGroupType": "1,2",
+    "ItemPrice.AllowedNonStock": 1,
+    "ItemPrice.CompanyID": 7
 };
