@@ -149,6 +149,20 @@ function DevExpressConverter() {
         const leftDefault = ast.left?.args && ast.left?.args[1]?.value;
         const right = ast.right !== undefined ? processAstNode(ast.right) : convertValue(ast.value);
         const rightDefault = ast.right?.args && ast.right?.args[1]?.value;
+
+        // Short-circuit when ISNULL's first arg is a placeholder (resolved concrete value, not a column).
+        // evaluateExpression cannot handle non-numeric string comparisons (e.g. "INV1" = ""),
+        // so detect and short-circuit here before any ISNULL column-null handling runs.
+        if (EnableShortCircuit && ast.left?.type === "function" && ast.left?.name === "ISNULL" &&
+            ast.left?.args?.[0]?.value?.type === "placeholder") {
+            if (IsValueNullShortCircuit && (left === null || right === null)) return true;
+            if (left !== null && right !== null) {
+                const normalL = normalizeBool(left);
+                const normalR = normalizeBool(right);
+                return normalL === normalR ? true : false;
+            }
+        }
+
         let operatorToken = ast.operator.toLowerCase();
         let includeExtradata = false;
 
