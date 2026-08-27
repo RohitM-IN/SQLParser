@@ -382,6 +382,28 @@ describe("Parser SQL to dx Filter Builder", () => {
                 "AllowSubDealer", "=", true, { "type": "ISNULL", "position": "column", "defaultValue": 0 }, true
             ]
         },
+                {
+            input: "(CompanyID = {SingleStepTransferDocument.CompanyID} OR {SingleStepTransferDocument.CompanyID} = 0 OR ISNULL(CompanyID,0) = 0) AND ((ISNULL(IsSubdealer,0)) IN ({SingleStepTransferDocument.AllowedSubdealer}))",
+            expected:  [
+                [ 
+                    [ "CompanyID", "=", 2, ], 
+                    "or", 
+                    [  
+                        [ "CompanyID", "=", 0, ], 
+                        "or", 
+                        [ "CompanyID", "=",  null, { "defaultValue": 0, "position": "column", "type": "ISNULL", }, null, ],
+                         "or", 
+                         [ "CompanyID", "=", false, ],
+                    ],
+                ],
+                "and",
+                [
+                    [ "IsSubdealer", "=", false, ],
+                    "or",
+                    [ "IsSubdealer", "=", null, { "defaultValue": 0, "position": "column", "type": "ISNULL", }, null, ]
+                ]
+            ]
+        },
         {
             input: "ISNULL(AllowSubDealer,1) = {LeadDocument.AllowSubDealer}",
             expected: [
@@ -440,6 +462,21 @@ describe("Parser SQL to dx Filter Builder", () => {
                         ["CompanyID", "=", false]
                     ]
                 ]
+            ],
+        },
+        {
+            input: "BranchID = {AdjustmentDocument.BranchID} AND CompanyID = {AdjustmentDocument.CompanyID} AND IsFromInvoice = {AdjustmentDocument.IsFromInvoice} AND (SupplierInvoiceNO IN ('{AdjustmentDocument.SupplierInvoiceNos}') OR ISNULL('{AdjustmentDocument.SupplierInvoiceNos}','''') = '''')",
+            expected: [
+                [
+                    ["BranchID", "=", 42],
+                    "and",
+                    ["CompanyID", "=", 7],
+                    "and",
+                    ["IsFromInvoice", "=", true],
+                ],
+                "and",
+                ["SupplierInvoiceNO", "=", "INV1"]
+
             ]
         }
     ];
@@ -480,6 +517,8 @@ describe("Parser SQL to dx Filter Builder", () => {
 
 
 const sampleData = {
+    "SingleStepTransferDocument.CompanyID": 2,
+    "SingleStepTransferDocument.AllowedSubdealer": false,
     "Example.ZeroValue": 0,
     "CoreEntity0022.CompanyGroupID": 42,
     "CoreEntity0022.BranchID": 7,
@@ -513,7 +552,11 @@ const sampleData = {
     "PurchaseOrderDocument.IsMultiBrand": false,
     "PurchaseOrderDocument.AllowedApplicableMake": "0",
     "SampleDoc.AuthFilterID": "ID",
-        "ItemPrice.AllowedItemGroupType": "1,2",
+    "ItemPrice.AllowedItemGroupType": "1,2",
     "ItemPrice.AllowedNonStock": 1,
-    "ItemPrice.CompanyID": 7
+    "ItemPrice.CompanyID": 7,
+    "AdjustmentDocument.BranchID": 42,
+    "AdjustmentDocument.CompanyID": 7,
+    "AdjustmentDocument.IsFromInvoice": true,
+    "AdjustmentDocument.SupplierInvoiceNos": "INV1"
 };

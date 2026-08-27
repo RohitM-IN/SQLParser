@@ -149,6 +149,20 @@ function DevExpressConverter() {
         const leftDefault = ast.left?.args && ast.left?.args[1]?.value;
         const right = ast.right !== undefined ? processAstNode(ast.right) : convertValue(ast.value);
         const rightDefault = ast.right?.args && ast.right?.args[1]?.value;
+
+        // Short-circuit when ISNULL's first arg is a placeholder (resolved concrete value, not a column).
+        // evaluateExpression cannot handle non-numeric string comparisons (e.g. "INV1" = ""),
+        // so detect and short-circuit here before any ISNULL column-null handling runs.
+        if (EnableShortCircuit && ast.left?.type === "function" && ast.left?.name === "ISNULL" &&
+            ast.left?.args?.[0]?.value?.type === "placeholder") {
+            if (IsValueNullShortCircuit && (left === null || right === null)) return true;
+            if (left !== null && right !== null) {
+                const normalL = normalizeBool(left);
+                const normalR = normalizeBool(right);
+                return normalL === normalR ? true : false;
+            }
+        }
+
         let operatorToken = ast.operator.toLowerCase();
         let includeExtradata = false;
 
@@ -350,11 +364,27 @@ function DevExpressConverter() {
         let operatorToken = operator === "IN" ? '=' : operator === "NOT IN" ? '!=' : operator;
         let joinOperatorToken = operator === "IN" ? 'or' : operator === "NOT IN" ? 'and' : operator;
         let field = convertValue(ast.field);
+
+        // When the field itself is an ISNULL(column, default) check, preserve the
+        // null-fallback semantics instead of silently collapsing it to the bare column.
+        const isFieldNullCheck = isFunctionNullCheck(ast.field, true);
+        const nullCheckArg = isFieldNullCheck ? ast.field.args[1]?.value : undefined;
+
+        const buildEntry = (val) => {
+            const base = [field, operatorToken, val];
+            if (!isFieldNullCheck) return base;
+
+            if (normalizeBool(val) == normalizeBool(nullCheckArg)) {
+                return [base, 'or', [field, operatorToken, null, { type: "ISNULL", position: "column", defaultValue: nullCheckArg }, null]];
+            }
+            return [...base, { type: "ISNULL", position: "column", defaultValue: nullCheckArg }, val];
+        };
+
         if (Array.isArray(resolvedValue) && resolvedValue.length) {
-            return resolvedValue.flatMap(i => [[field, operatorToken, i], joinOperatorToken]).slice(0, -1);
+            return resolvedValue.flatMap(i => [buildEntry(i), joinOperatorToken]).slice(0, -1);
         }
 
-        return [field, operatorToken, resolvedValue];
+        return buildEntry(resolvedValue);
     }
 
     /**
