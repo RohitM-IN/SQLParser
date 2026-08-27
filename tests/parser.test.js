@@ -382,6 +382,28 @@ describe("Parser SQL to dx Filter Builder", () => {
                 "AllowSubDealer", "=", true, { "type": "ISNULL", "position": "column", "defaultValue": 0 }, true
             ]
         },
+                {
+            input: "(CompanyID = {SingleStepTransferDocument.CompanyID} OR {SingleStepTransferDocument.CompanyID} = 0 OR ISNULL(CompanyID,0) = 0) AND ((ISNULL(IsSubdealer,0)) IN ({SingleStepTransferDocument.AllowedSubdealer}))",
+            expected:  [
+                [ 
+                    [ "CompanyID", "=", 2, ], 
+                    "or", 
+                    [  
+                        [ "CompanyID", "=", 0, ], 
+                        "or", 
+                        [ "CompanyID", "=",  null, { "defaultValue": 0, "position": "column", "type": "ISNULL", }, null, ],
+                         "or", 
+                         [ "CompanyID", "=", false, ],
+                    ],
+                ],
+                "and",
+                [
+                    [ "IsSubdealer", "=", false, ],
+                    "or",
+                    [ "IsSubdealer", "=", null, { "defaultValue": 0, "position": "column", "type": "ISNULL", }, null, ]
+                ]
+            ]
+        },
         {
             input: "ISNULL(AllowSubDealer,1) = {LeadDocument.AllowSubDealer}",
             expected: [
@@ -495,6 +517,8 @@ describe("Parser SQL to dx Filter Builder", () => {
 
 
 const sampleData = {
+    "SingleStepTransferDocument.CompanyID": 2,
+    "SingleStepTransferDocument.AllowedSubdealer": false,
     "Example.ZeroValue": 0,
     "CoreEntity0022.CompanyGroupID": 42,
     "CoreEntity0022.BranchID": 7,

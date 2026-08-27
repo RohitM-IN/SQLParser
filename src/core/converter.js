@@ -364,11 +364,27 @@ function DevExpressConverter() {
         let operatorToken = operator === "IN" ? '=' : operator === "NOT IN" ? '!=' : operator;
         let joinOperatorToken = operator === "IN" ? 'or' : operator === "NOT IN" ? 'and' : operator;
         let field = convertValue(ast.field);
+
+        // When the field itself is an ISNULL(column, default) check, preserve the
+        // null-fallback semantics instead of silently collapsing it to the bare column.
+        const isFieldNullCheck = isFunctionNullCheck(ast.field, true);
+        const nullCheckArg = isFieldNullCheck ? ast.field.args[1]?.value : undefined;
+
+        const buildEntry = (val) => {
+            const base = [field, operatorToken, val];
+            if (!isFieldNullCheck) return base;
+
+            if (normalizeBool(val) == normalizeBool(nullCheckArg)) {
+                return [base, 'or', [field, operatorToken, null, { type: "ISNULL", position: "column", defaultValue: nullCheckArg }, null]];
+            }
+            return [...base, { type: "ISNULL", position: "column", defaultValue: nullCheckArg }, val];
+        };
+
         if (Array.isArray(resolvedValue) && resolvedValue.length) {
-            return resolvedValue.flatMap(i => [[field, operatorToken, i], joinOperatorToken]).slice(0, -1);
+            return resolvedValue.flatMap(i => [buildEntry(i), joinOperatorToken]).slice(0, -1);
         }
 
-        return [field, operatorToken, resolvedValue];
+        return buildEntry(resolvedValue);
     }
 
     /**
