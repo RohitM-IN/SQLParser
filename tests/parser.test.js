@@ -478,6 +478,30 @@ describe("Parser SQL to dx Filter Builder", () => {
                 ["SupplierInvoiceNO", "=", "INV1"]
 
             ]
+        },
+        {
+            input: `DocType IN ({QuoteDocument.AllowedDocType})
+AND CompanyID = {QuoteDocument.CompanyID}
+AND
+(
+    {QuoteDocument.IsVehicle} = 0
+    OR
+    (
+        {QuoteDocument.IsVehicle} = 1
+        AND ProspectID IS NOT NULL
+    )
+)`,
+            expected: [
+                [
+                    ["DocType", "=", "10809"],
+                    "or",
+                    ["DocType", "=", "40927"]
+                ],
+                "and",
+                ["CompanyID", "=", 2],
+                "and",
+                ["ProspectID", "!=", null, { "type": "IS NOT" }, null]
+            ]
         }
     ];
 
@@ -558,5 +582,8 @@ const sampleData = {
     "AdjustmentDocument.BranchID": 42,
     "AdjustmentDocument.CompanyID": 7,
     "AdjustmentDocument.IsFromInvoice": true,
-    "AdjustmentDocument.SupplierInvoiceNos": "INV1"
+    "AdjustmentDocument.SupplierInvoiceNos": "INV1",
+    "QuoteDocument.AllowedDocType": "10809,40927",
+    "QuoteDocument.CompanyID": 2,
+    "QuoteDocument.IsVehicle": true
 };

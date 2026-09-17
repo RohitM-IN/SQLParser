@@ -238,7 +238,9 @@ function DevExpressConverter() {
         }
 
         // Apply short-circuit evaluation if enabled
-        if (EnableShortCircuit && IsValueNullShortCircuit && (left == null || right == null)) {
+        // Skip for "IS NOT" (e.g. "col IS NOT NULL"): its null is a literal from the query
+        // itself, not a placeholder resolving to null, so it must remain a real filter.
+        if (EnableShortCircuit && IsValueNullShortCircuit && originalOperator !== "IS NOT" && (left == null || right == null)) {
             return true; // If either value is null, return true for short-circuit evaluation
         }
 
