@@ -276,7 +276,7 @@ describe("Parser SQL to dx Filter Builder", () => {
         },
         {
             input: "ID IN ({SaleOrderStatusStmtGlobalRpt.RegionID})",
-            expected: []
+            expected: ["ID","=",null]
         },
         {
             input: "10 < ID AND ApplicableUoms IN ({WorkOrderLine.ApplicableUoms})",
