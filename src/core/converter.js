@@ -240,7 +240,10 @@ function DevExpressConverter() {
         // Apply short-circuit evaluation if enabled
         // Skip for "IS NOT" (e.g. "col IS NOT NULL"): its null is a literal from the query
         // itself, not a placeholder resolving to null, so it must remain a real filter.
-        if (EnableShortCircuit && IsValueNullShortCircuit && originalOperator !== "IS NOT" && (left == null || right == null)) {
+        // Avoid null short-circuit when comparison is produced from ISNULL(column, default),
+        // otherwise OR branches like ISNULL(CompanyID,0)=param OR ISNULL(CompanyID,0)=0
+        // can collapse to a full-match filter when param is null.
+        if (EnableShortCircuit && IsValueNullShortCircuit && originalOperator !== "IS NOT" && (left == null || right == null) && !isLeftNullCheck && !isRightNullCheck) {
             return true; // If either value is null, return true for short-circuit evaluation
         }
 
@@ -357,10 +360,6 @@ function DevExpressConverter() {
                 else if (operator === "NOT IN")
                     return fieldVal != value;
             }
-        }
-
-        if (EnableShortCircuit && IsValueNullShortCircuit && (ast.field?.type === "placeholder" || ast.value?.type === "placeholder" || ast.value === null) && resolvedValue === null) {
-            return true;
         }
 
         let operatorToken = operator === "IN" ? '=' : operator === "NOT IN" ? '!=' : operator;
