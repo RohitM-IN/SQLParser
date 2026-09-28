@@ -1,0 +1,1405 @@
+{
+  "$comment": [
+    "Shared test cases for both projects:",
+    "  JS  (SQLParser)       tests/parser.test.js : input + variables -> convertSQLToAst/convertAstToDevextreme -> must equal 'filter'",
+    "  C#  (SQLParserTests)  DevexpressFilterParserTests : 'filter' -> DevexpressFilterParser.ParseFilterQuery -> must equal 'expectedSql'",
+    "",
+    "Each case:",
+    "  id          - unique case number (shown in both test runners).",
+    "  input       - original SQL given to the JS converter (documentation only). String, or array of lines.",
+    "  filter      - DevExtreme filter the JS converter must produce for 'input' (null = convertSQLToAst returns null).",
+    "                [column, op, value] or [column, op, value, options, rawValue]; groups are [cond, 'and'|'or', cond, ...].",
+    "  expectedSql - SQL the C# parser must produce. String, or array of lines joined with a single space.",
+    "  note        - optional explanation of non-obvious behaviour.",
+    "  skip        - optional { \"js\" | \"csharp\": \"reason\" } to skip the case in one test runner.",
+    "",
+    "SQL conventions: identifiers are double-quoted, strings are N'...', booleans become 1/0,",
+    "'= null' becomes IS NULL, and nested groups are wrapped as '( ... )'."
+  ],
+  "converterOptions": {
+    "isValueNullShortCircuit": true,
+    "treatNumberAsNullableBit": true
+  },
+  "variables": {
+    "SingleStepTransferDocument.CompanyID": 2,
+    "SingleStepTransferDocument.AllowedSubdealer": false,
+    "Example.ZeroValue": 0,
+    "CoreEntity0022.CompanyGroupID": 42,
+    "CoreEntity0022.BranchID": 7,
+    "Employee.District": 0,
+    "Employee.BranchID": 7,
+    "SaleInvoiceDocument.ContactID": 42,
+    "SaleInvoiceDocument.BranchID": 7,
+    "AccountingRule.CompanyID": 42,
+    "AccountingRule.BranchID": 7,
+    "Area.AreaType": 42,
+    "Area.BranchID": 7,
+    "Item.ID": 42,
+    "Item.BranchID": 7,
+    "Item.AllowedItemGroupType": "1,2",
+    "Item.AllowedItemGroupTypeOne": "1",
+    "WorkOrderLine.ApplicableUoms": [
+      "UOM1",
+      "UOM2",
+      "UOM3"
+    ],
+    "WorkOrderLine.CompanyID": 2,
+    "WorkOrderDocument.CompanyID": 42,
+    "WorkOrderDocument.BranchID": 7,
+    "TransferOutwardDocument.DocDate": "2022-01-01",
+    "TransferOutwardDocument.RefBranchID": 42,
+    "TransferOutwardDocument.CompanyID": 7,
+    "LeadDocument.BranchID": 42,
+    "LeadDocument.CompanyID": 7,
+    "ServiceOrderDocument.SourceID": 2,
+    "LeadDocument.AllowSubDealer": true,
+    "SupportResolution.TicketID": 123,
+    "SaleOrderStatusStmtGlobalRpt.StateID": null,
+    "SaleOrderStatusStmtGlobalRpt.RegionID": null,
+    "WorkOrderLine.CompanyIDs": [
+      "0,1"
+    ],
+    "PurchaseOrderDocument.IsMultiBrand": false,
+    "PurchaseOrderDocument.AllowedApplicableMake": "0",
+    "SampleDoc.AuthFilterID": "ID",
+    "ItemPrice.AllowedItemGroupType": "1,2",
+    "ItemPrice.AllowedNonStock": 1,
+    "ItemPrice.CompanyID": 7,
+    "AdjustmentDocument.BranchID": 42,
+    "AdjustmentDocument.CompanyID": 7,
+    "AdjustmentDocument.IsFromInvoice": true,
+    "AdjustmentDocument.SupplierInvoiceNos": "INV1",
+    "QuoteDocument.AllowedDocType": "10809,40927",
+    "QuoteDocument.CompanyID": 2,
+    "QuoteDocument.IsVehicle": true
+  },
+  "groups": [
+    {
+      "name": "Simple comparisons",
+      "cases": [
+        {
+          "id": 1,
+          "input": "(ID = {CoreEntity0022.CompanyGroupID} OR ISNULL({CoreEntity0022.CompanyGroupID},0) = 0)",
+          "filter": [
+            "ID",
+            "=",
+            42
+          ],
+          "expectedSql": "\"ID\" = 42"
+        },
+        {
+          "id": 5,
+          "input": "CompanyID = {AccountingRule.CompanyID}",
+          "filter": [
+            "CompanyID",
+            "=",
+            42
+          ],
+          "expectedSql": "\"CompanyID\" = 42"
+        },
+        {
+          "id": 6,
+          "input": "(Level > {Area.AreaType})",
+          "filter": [
+            "Level",
+            ">",
+            42
+          ],
+          "expectedSql": "\"Level\" > 42"
+        },
+        {
+          "id": 9,
+          "input": "(ID <> {Item.ID}) AND ( ItemGroupType = '''')",
+          "filter": [
+            [
+              "ID",
+              "<>",
+              42
+            ],
+            "and",
+            [
+              "ItemGroupType",
+              "=",
+              ""
+            ]
+          ],
+          "expectedSql": "\"ID\" <> 42 AND \"ItemGroupType\" = N''"
+        },
+        {
+          "id": 15,
+          "input": "AddressType NOT IN (2, 4)",
+          "filter": [
+            [
+              "AddressType",
+              "!=",
+              2
+            ],
+            "and",
+            [
+              "AddressType",
+              "!=",
+              4
+            ]
+          ],
+          "expectedSql": "\"AddressType\" != 2 AND \"AddressType\" != 4"
+        },
+        {
+          "id": 16,
+          "input": "AddressType IN ('2', ('4')) OR AddressType =({ServiceOrderDocument .SourceID})",
+          "filter": [
+            [
+              "AddressType",
+              "=",
+              "2"
+            ],
+            "or",
+            [
+              "AddressType",
+              "=",
+              "4"
+            ],
+            "or",
+            [
+              "AddressType",
+              "=",
+              2
+            ]
+          ],
+          "expectedSql": "\"AddressType\" = N'2' OR \"AddressType\" = N'4' OR \"AddressType\" = 2"
+        },
+        {
+          "id": 21,
+          "input": "ID IN ({WorkOrderLine.CompanyIDs}) AND 0 IN ({WorkOrderLine.CompanyIDs})",
+          "filter": [
+            [
+              "ID",
+              "=",
+              "0"
+            ],
+            "or",
+            [
+              "ID",
+              "=",
+              "1"
+            ]
+          ],
+          "expectedSql": "\"ID\" = N'0' OR \"ID\" = N'1'"
+        },
+        {
+          "id": 33,
+          "input": "{ServiceOrderDocument.SourceID} = ID",
+          "filter": [
+            "ID",
+            "=",
+            2
+          ],
+          "expectedSql": "\"ID\" = 2"
+        },
+        {
+          "id": 34,
+          "input": "IsChecked = 1",
+          "filter": [
+            [
+              "IsChecked",
+              "=",
+              1
+            ],
+            "or",
+            [
+              "IsChecked",
+              "=",
+              true
+            ]
+          ],
+          "expectedSql": "\"IsChecked\" = 1 OR \"IsChecked\" = 1"
+        },
+        {
+          "id": 49,
+          "input": "AccountID = {AccountingRule.CompanyId}",
+          "filter": [
+            "AccountID",
+            "=",
+            42
+          ],
+          "expectedSql": "\"AccountID\" = 42"
+        }
+      ]
+    },
+    {
+      "name": "Nested groups (IN lists, AND / OR)",
+      "cases": [
+        {
+          "id": 3,
+          "input": "ContactID = {SaleInvoiceDocument.ContactID} AND AddressType IN (2, 4)",
+          "filter": [
+            [
+              "ContactID",
+              "=",
+              42
+            ],
+            "and",
+            [
+              [
+                "AddressType",
+                "=",
+                2
+              ],
+              "or",
+              [
+                "AddressType",
+                "=",
+                4
+              ]
+            ]
+          ],
+          "expectedSql": "\"ContactID\" = 42 AND ( \"AddressType\" = 2 OR \"AddressType\" = 4 )"
+        },
+        {
+          "id": 4,
+          "input": "ID IN ({WorkOrderLine.ApplicableUoms}) AND (CompanyID = {WorkOrderDocument.CompanyID} OR {WorkOrderDocument.CompanyID} = 0)",
+          "filter": [
+            [
+              [
+                "ID",
+                "=",
+                "UOM1"
+              ],
+              "or",
+              [
+                "ID",
+                "=",
+                "UOM2"
+              ],
+              "or",
+              [
+                "ID",
+                "=",
+                "UOM3"
+              ]
+            ],
+            "and",
+            [
+              "CompanyID",
+              "=",
+              42
+            ]
+          ],
+          "expectedSql": [
+            "( \"ID\" = N'UOM1' OR \"ID\" = N'UOM2' OR \"ID\" = N'UOM3' )",
+            "AND \"CompanyID\" = 42"
+          ]
+        },
+        {
+          "id": 7,
+          "input": "(ID <> {Item.ID}) AND (ItemGroupType IN ({Item.AllowedItemGroupType}))",
+          "filter": [
+            [
+              "ID",
+              "<>",
+              42
+            ],
+            "and",
+            [
+              [
+                "ItemGroupType",
+                "=",
+                "1"
+              ],
+              "or",
+              [
+                "ItemGroupType",
+                "=",
+                "2"
+              ]
+            ]
+          ],
+          "expectedSql": "\"ID\" <> 42 AND ( \"ItemGroupType\" = N'1' OR \"ItemGroupType\" = N'2' )"
+        },
+        {
+          "id": 10,
+          "input": "((ISNULL({0}, 0) = 0 AND CompanyID = {1}) OR CompanyID IS NULL) OR BranchID = {0} | [LeadDocument.BranchID] | [LeadDocument.CompanyID]",
+          "filter": [
+            [
+              "CompanyID",
+              "=",
+              7
+            ],
+            "or",
+            [
+              "CompanyID",
+              "=",
+              null,
+              {
+                "type": "IS"
+              },
+              null
+            ],
+            "or",
+            [
+              "BranchID",
+              "=",
+              42
+            ]
+          ],
+          "expectedSql": "\"CompanyID\" = 7 OR \"CompanyID\" IS NULL OR \"BranchID\" = 42"
+        },
+        {
+          "id": 32,
+          "input": "10 < ID AND ApplicableUoms IN ({WorkOrderLine.ApplicableUoms})",
+          "filter": [
+            [
+              "ID",
+              ">",
+              10
+            ],
+            "and",
+            [
+              [
+                "ApplicableUoms",
+                "=",
+                "UOM1"
+              ],
+              "or",
+              [
+                "ApplicableUoms",
+                "=",
+                "UOM2"
+              ],
+              "or",
+              [
+                "ApplicableUoms",
+                "=",
+                "UOM3"
+              ]
+            ]
+          ],
+          "expectedSql": [
+            "\"ID\" > 10",
+            "AND ( \"ApplicableUoms\" = N'UOM1' OR \"ApplicableUoms\" = N'UOM2' OR \"ApplicableUoms\" = N'UOM3' )"
+          ]
+        },
+        {
+          "id": 52,
+          "input": "BranchID = {AdjustmentDocument.BranchID} AND CompanyID = {AdjustmentDocument.CompanyID} AND IsFromInvoice = {AdjustmentDocument.IsFromInvoice} AND (SupplierInvoiceNO IN ('{AdjustmentDocument.SupplierInvoiceNos}') OR ISNULL('{AdjustmentDocument.SupplierInvoiceNos}','''') = '''')",
+          "filter": [
+            [
+              [
+                "BranchID",
+                "=",
+                42
+              ],
+              "and",
+              [
+                "CompanyID",
+                "=",
+                7
+              ],
+              "and",
+              [
+                "IsFromInvoice",
+                "=",
+                true
+              ]
+            ],
+            "and",
+            [
+              "SupplierInvoiceNO",
+              "=",
+              "INV1"
+            ]
+          ],
+          "expectedSql": [
+            "( \"BranchID\" = 42 AND \"CompanyID\" = 7 AND \"IsFromInvoice\" = 1 )",
+            "AND \"SupplierInvoiceNO\" = N'INV1'"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "IS NULL / IS NOT NULL",
+      "cases": [
+        {
+          "id": 8,
+          "input": "((FromDate <= '{TransferOutwardDocument.DocDate}' AND ToDate >= '{TransferOutwardDocument.DocDate}') OR ToDate is NULL) AND (BranchID = {TransferOutwardDocument.RefBranchID} OR RefBranchID is NULL) AND (CompanyID = {TransferOutwardDocument.CompanyID}  OR {TransferOutwardDocument.CompanyID} = 0 OR CompanyID is NULL)",
+          "filter": [
+            [
+              [
+                [
+                  [
+                    "FromDate",
+                    "<=",
+                    "2022-01-01"
+                  ],
+                  "and",
+                  [
+                    "ToDate",
+                    ">=",
+                    "2022-01-01"
+                  ]
+                ],
+                "or",
+                [
+                  "ToDate",
+                  "=",
+                  null,
+                  {
+                    "type": "IS"
+                  },
+                  null
+                ]
+              ],
+              "and",
+              [
+                [
+                  "BranchID",
+                  "=",
+                  42
+                ],
+                "or",
+                [
+                  "RefBranchID",
+                  "=",
+                  null,
+                  {
+                    "type": "IS"
+                  },
+                  null
+                ]
+              ]
+            ],
+            "and",
+            [
+              [
+                "CompanyID",
+                "=",
+                7
+              ],
+              "or",
+              [
+                "CompanyID",
+                "=",
+                null,
+                {
+                  "type": "IS"
+                },
+                null
+              ]
+            ]
+          ],
+          "expectedSql": [
+            "( ( ( \"FromDate\" <= N'2022-01-01' AND \"ToDate\" >= N'2022-01-01' ) OR \"ToDate\" IS NULL )",
+            "AND ( \"BranchID\" = 42 OR \"RefBranchID\" IS NULL ) )",
+            "AND ( \"CompanyID\" = 7 OR \"CompanyID\" IS NULL )"
+          ]
+        },
+        {
+          "id": 12,
+          "input": "BranchID is Null OR BranchID is not 12",
+          "filter": [
+            [
+              "BranchID",
+              "=",
+              null,
+              {
+                "type": "IS"
+              },
+              null
+            ],
+            "or",
+            [
+              "BranchID",
+              "!=",
+              12,
+              {
+                "type": "IS NOT"
+              },
+              12
+            ]
+          ],
+          "expectedSql": "\"BranchID\" IS NULL OR \"BranchID\" != 12",
+          "note": "'IS NOT 12' is not valid T-SQL, so non-NULL values keep the DevExtreme operator."
+        },
+        {
+          "id": 22,
+          "input": "CompanyID is null OR CompanyID is 7 OR CompanyID is not 8",
+          "filter": [
+            [
+              "CompanyID",
+              "=",
+              null,
+              {
+                "type": "IS"
+              },
+              null
+            ],
+            "or",
+            [
+              "CompanyID",
+              "=",
+              7,
+              {
+                "type": "IS"
+              },
+              7
+            ],
+            "or",
+            [
+              "CompanyID",
+              "!=",
+              8,
+              {
+                "type": "IS NOT"
+              },
+              8
+            ]
+          ],
+          "expectedSql": "\"CompanyID\" IS NULL OR \"CompanyID\" = 7 OR \"CompanyID\" != 8",
+          "note": "'IS 7' / 'IS NOT 8' are not valid T-SQL, so non-NULL values keep the DevExtreme operator."
+        },
+        {
+          "id": 31,
+          "input": "ID IN ({SaleOrderStatusStmtGlobalRpt.RegionID})",
+          "filter": [
+            "ID",
+            "=",
+            null
+          ],
+          "expectedSql": "\"ID\" IS NULL",
+          "note": "Plain '= null' (no options) must still become IS NULL."
+        },
+        {
+          "id": 48,
+          "input": "(CompanyID = {LeadDocument.CompanyID} OR CompanyID IS NULL) AND ItemGroupType IN ({Item.AllowedItemGroupTypeOne}) AND ({PurchaseOrderDocument.IsMultiBrand} = 0 OR ({PurchaseOrderDocument.IsMultiBrand} = 1 AND Make IN ({PurchaseOrderDocument.AllowedApplicableMake})))",
+          "filter": [
+            [
+              [
+                "CompanyID",
+                "=",
+                7
+              ],
+              "or",
+              [
+                "CompanyID",
+                "=",
+                null,
+                {
+                  "type": "IS"
+                },
+                null
+              ]
+            ],
+            "and",
+            [
+              "ItemGroupType",
+              "=",
+              "1"
+            ]
+          ],
+          "expectedSql": "( \"CompanyID\" = 7 OR \"CompanyID\" IS NULL ) AND \"ItemGroupType\" = N'1'"
+        },
+        {
+          "id": 53,
+          "input": [
+            "DocType IN ({QuoteDocument.AllowedDocType})",
+            "AND CompanyID = {QuoteDocument.CompanyID}",
+            "AND",
+            "(",
+            "    {QuoteDocument.IsVehicle} = 0",
+            "    OR",
+            "    (",
+            "        {QuoteDocument.IsVehicle} = 1",
+            "        AND ProspectID IS NOT NULL",
+            "    )",
+            ")"
+          ],
+          "filter": [
+            [
+              [
+                "DocType",
+                "=",
+                "10809"
+              ],
+              "or",
+              [
+                "DocType",
+                "=",
+                "40927"
+              ]
+            ],
+            "and",
+            [
+              "CompanyID",
+              "=",
+              2
+            ],
+            "and",
+            [
+              "ProspectID",
+              "!=",
+              null,
+              {
+                "type": "IS NOT"
+              },
+              null
+            ]
+          ],
+          "expectedSql": [
+            "( \"DocType\" = N'10809' OR \"DocType\" = N'40927' )",
+            "AND \"CompanyID\" = 2",
+            "AND \"ProspectID\" IS NOT NULL"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ISNULL on column side  -  ISNULL(\"col\", default) = value",
+      "cases": [
+        {
+          "id": 13,
+          "input": "ISNULL(SourceID,0) = {ServiceOrderDocument.SourceID} OR ISNULL(SourceID,0) = 0",
+          "filter": [
+            [
+              "SourceID",
+              "=",
+              2,
+              {
+                "type": "ISNULL",
+                "position": "column",
+                "defaultValue": 0
+              },
+              2
+            ],
+            "or",
+            [
+              [
+                "SourceID",
+                "=",
+                0
+              ],
+              "or",
+              [
+                "SourceID",
+                "=",
+                null,
+                {
+                  "type": "ISNULL",
+                  "position": "column",
+                  "defaultValue": 0
+                },
+                null
+              ],
+              "or",
+              [
+                "SourceID",
+                "=",
+                false
+              ]
+            ]
+          ],
+          "expectedSql": [
+            "ISNULL(\"SourceID\", 0) = 2",
+            "OR ( \"SourceID\" = 0 OR ISNULL(\"SourceID\", 0) = 0 OR \"SourceID\" = 0 )"
+          ],
+          "note": "A null value with a column-side ISNULL compares against the default: ISNULL(col, 0) = 0."
+        },
+        {
+          "id": 14,
+          "input": "(CompanyID = {LeadDocument.CompanyID} OR ISNULL(CompanyID,0) = 0) AND (ISNULL(IsSubdealer,0) = {LeadDocument.AllowSubDealer})",
+          "filter": [
+            [
+              [
+                "CompanyID",
+                "=",
+                7
+              ],
+              "or",
+              [
+                [
+                  "CompanyID",
+                  "=",
+                  0
+                ],
+                "or",
+                [
+                  "CompanyID",
+                  "=",
+                  null,
+                  {
+                    "type": "ISNULL",
+                    "position": "column",
+                    "defaultValue": 0
+                  },
+                  null
+                ],
+                "or",
+                [
+                  "CompanyID",
+                  "=",
+                  false
+                ]
+              ]
+            ],
+            "and",
+            [
+              "IsSubdealer",
+              "=",
+              true,
+              {
+                "type": "ISNULL",
+                "position": "column",
+                "defaultValue": 0
+              },
+              true
+            ]
+          ],
+          "expectedSql": [
+            "( \"CompanyID\" = 7 OR ( \"CompanyID\" = 0 OR ISNULL(\"CompanyID\", 0) = 0 OR \"CompanyID\" = 0 ) )",
+            "AND ISNULL(\"IsSubdealer\", 0) = 1"
+          ]
+        },
+        {
+          "id": 37,
+          "input": "ISNULL(CompanyID,0) = {LeadDocument.CompanyID}",
+          "filter": [
+            "CompanyID",
+            "=",
+            7,
+            {
+              "type": "ISNULL",
+              "position": "column",
+              "defaultValue": 0
+            },
+            7
+          ],
+          "expectedSql": "ISNULL(\"CompanyID\", 0) = 7"
+        },
+        {
+          "id": 45,
+          "input": "ISNULL(AllowSubDealer,0) = {LeadDocument.AllowSubDealer}",
+          "filter": [
+            "AllowSubDealer",
+            "=",
+            true,
+            {
+              "type": "ISNULL",
+              "position": "column",
+              "defaultValue": 0
+            },
+            true
+          ],
+          "expectedSql": "ISNULL(\"AllowSubDealer\", 0) = 1"
+        },
+        {
+          "id": 46,
+          "input": "(CompanyID = {SingleStepTransferDocument.CompanyID} OR {SingleStepTransferDocument.CompanyID} = 0 OR ISNULL(CompanyID,0) = 0) AND ((ISNULL(IsSubdealer,0)) IN ({SingleStepTransferDocument.AllowedSubdealer}))",
+          "filter": [
+            [
+              [
+                "CompanyID",
+                "=",
+                2
+              ],
+              "or",
+              [
+                [
+                  "CompanyID",
+                  "=",
+                  0
+                ],
+                "or",
+                [
+                  "CompanyID",
+                  "=",
+                  null,
+                  {
+                    "type": "ISNULL",
+                    "position": "column",
+                    "defaultValue": 0
+                  },
+                  null
+                ],
+                "or",
+                [
+                  "CompanyID",
+                  "=",
+                  false
+                ]
+              ]
+            ],
+            "and",
+            [
+              [
+                "IsSubdealer",
+                "=",
+                false
+              ],
+              "or",
+              [
+                "IsSubdealer",
+                "=",
+                null,
+                {
+                  "type": "ISNULL",
+                  "position": "column",
+                  "defaultValue": 0
+                },
+                null
+              ]
+            ]
+          ],
+          "expectedSql": [
+            "( \"CompanyID\" = 2 OR ( \"CompanyID\" = 0 OR ISNULL(\"CompanyID\", 0) = 0 OR \"CompanyID\" = 0 ) )",
+            "AND ( \"IsSubdealer\" = 0 OR ISNULL(\"IsSubdealer\", 0) = 0 )"
+          ]
+        },
+        {
+          "id": 47,
+          "input": "ISNULL(AllowSubDealer,1) = {LeadDocument.AllowSubDealer}",
+          "filter": [
+            [
+              "AllowSubDealer",
+              "=",
+              true
+            ],
+            "or",
+            [
+              "AllowSubDealer",
+              "=",
+              null,
+              {
+                "type": "ISNULL",
+                "position": "column",
+                "defaultValue": 1
+              },
+              null
+            ]
+          ],
+          "expectedSql": "\"AllowSubDealer\" = 1 OR ISNULL(\"AllowSubDealer\", 1) = 1"
+        },
+        {
+          "id": 51,
+          "input": "ItemGroupType IN ({ItemPrice.AllowedItemGroupType}) AND ((ISNULL(IsNonStock,0))={ItemPrice.AllowedNonStock})  AND (CompanyID = {ItemPrice.CompanyID} OR {ItemPrice.CompanyID} = 0 OR ISNULL(CompanyID,0) = 0)",
+          "filter": [
+            [
+              [
+                [
+                  "ItemGroupType",
+                  "=",
+                  "1"
+                ],
+                "or",
+                [
+                  "ItemGroupType",
+                  "=",
+                  "2"
+                ]
+              ],
+              "and",
+              [
+                [
+                  "IsNonStock",
+                  "=",
+                  1,
+                  {
+                    "type": "ISNULL",
+                    "position": "column",
+                    "defaultValue": 0
+                  },
+                  1
+                ],
+                "or",
+                [
+                  "IsNonStock",
+                  "=",
+                  true
+                ]
+              ]
+            ],
+            "and",
+            [
+              [
+                "CompanyID",
+                "=",
+                7
+              ],
+              "or",
+              [
+                [
+                  "CompanyID",
+                  "=",
+                  0
+                ],
+                "or",
+                [
+                  "CompanyID",
+                  "=",
+                  null,
+                  {
+                    "type": "ISNULL",
+                    "position": "column",
+                    "defaultValue": 0
+                  },
+                  null
+                ],
+                "or",
+                [
+                  "CompanyID",
+                  "=",
+                  false
+                ]
+              ]
+            ]
+          ],
+          "expectedSql": [
+            "( ( \"ItemGroupType\" = N'1' OR \"ItemGroupType\" = N'2' )",
+            "AND ( ISNULL(\"IsNonStock\", 0) = 1 OR \"IsNonStock\" = 1 ) )",
+            "AND ( \"CompanyID\" = 7 OR ( \"CompanyID\" = 0 OR ISNULL(\"CompanyID\", 0) = 0 OR \"CompanyID\" = 0 ) )"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ISNULL on value side  -  \"col\" = ISNULL(value, defaultValue)",
+      "cases": [
+        {
+          "id": 18,
+          "input": "CompanyID = ISNULL({LeadDocument.CompanyID},0) OR (ISNULL(CompanyID,0) = 0))",
+          "filter": [
+            [
+              "CompanyID",
+              "=",
+              7,
+              {
+                "type": "ISNULL",
+                "position": "value",
+                "defaultValue": 0
+              },
+              7
+            ],
+            "or",
+            [
+              [
+                "CompanyID",
+                "=",
+                0
+              ],
+              "or",
+              [
+                "CompanyID",
+                "=",
+                null,
+                {
+                  "type": "ISNULL",
+                  "position": "column",
+                  "defaultValue": 0
+                },
+                null
+              ],
+              "or",
+              [
+                "CompanyID",
+                "=",
+                false
+              ]
+            ]
+          ],
+          "expectedSql": [
+            "\"CompanyID\" = ISNULL(7, 0)",
+            "OR ( \"CompanyID\" = 0 OR ISNULL(\"CompanyID\", 0) = 0 OR \"CompanyID\" = 0 )"
+          ]
+        },
+        {
+          "id": 40,
+          "input": "CompanyID = ISNULL({LeadDocument.CompanyID},0)",
+          "filter": [
+            "CompanyID",
+            "=",
+            7,
+            {
+              "type": "ISNULL",
+              "position": "value",
+              "defaultValue": 0
+            },
+            7
+          ],
+          "expectedSql": "\"CompanyID\" = ISNULL(7, 0)"
+        },
+        {
+          "id": 41,
+          "input": "AllowSubDealer = ISNULL({LeadDocument.AllowSubDealer},0)",
+          "filter": [
+            "AllowSubDealer",
+            "=",
+            true,
+            {
+              "type": "ISNULL",
+              "position": "value",
+              "defaultValue": 0
+            },
+            true
+          ],
+          "expectedSql": "\"AllowSubDealer\" = ISNULL(1, 0)"
+        },
+        {
+          "id": 42,
+          "input": "AllowSubDealer = ISNULL({SaleOrderStatusStmtGlobalRpt.StateID},0)",
+          "filter": [
+            "AllowSubDealer",
+            "=",
+            null,
+            {
+              "type": "ISNULL",
+              "position": "value",
+              "defaultValue": 0
+            },
+            null
+          ],
+          "expectedSql": "\"AllowSubDealer\" = ISNULL(NULL, 0)"
+        },
+        {
+          "id": 43,
+          "input": "AllowSubDealer = ISNULL({LeadDocument.AllowSubDealer},1)",
+          "filter": [
+            "AllowSubDealer",
+            "=",
+            true,
+            {
+              "type": "ISNULL",
+              "position": "value",
+              "defaultValue": 1
+            },
+            true
+          ],
+          "expectedSql": "\"AllowSubDealer\" = ISNULL(1, 1)"
+        }
+      ]
+    },
+    {
+      "name": "ISNULL on both sides  -  ISNULL(\"col\", defaultValue) = ISNULL(value, defaultValueRight)",
+      "cases": [
+        {
+          "id": 17,
+          "input": "(ISNULL(TicketID, 0) = ISNULL({SupportResolution.TicketID}, 0))",
+          "filter": [
+            [
+              "TicketID",
+              "=",
+              123,
+              {
+                "type": "ISNULL",
+                "position": "both",
+                "defaultValue": 0,
+                "defaultValueRight": 0
+              },
+              123
+            ],
+            "or",
+            [
+              "TicketID",
+              "=",
+              null
+            ]
+          ],
+          "expectedSql": "ISNULL(\"TicketID\", 0) = ISNULL(123, 0) OR \"TicketID\" IS NULL"
+        },
+        {
+          "id": 35,
+          "input": "ISNULL(CompanyID,0) = ISNULL({TransferOutwardDocument.CompanyID},0) OR (ISNULL(CompanyID,0) = 0)",
+          "filter": [
+            [
+              "CompanyID",
+              "=",
+              7,
+              {
+                "type": "ISNULL",
+                "position": "both",
+                "defaultValue": 0,
+                "defaultValueRight": 0
+              },
+              7
+            ],
+            "or",
+            [
+              "CompanyID",
+              "=",
+              null
+            ],
+            "or",
+            [
+              "CompanyID",
+              "=",
+              0
+            ],
+            "or",
+            [
+              "CompanyID",
+              "=",
+              null,
+              {
+                "type": "ISNULL",
+                "position": "column",
+                "defaultValue": 0
+              },
+              null
+            ],
+            "or",
+            [
+              "CompanyID",
+              "=",
+              false
+            ]
+          ],
+          "expectedSql": [
+            "ISNULL(\"CompanyID\", 0) = ISNULL(7, 0)",
+            "OR \"CompanyID\" IS NULL",
+            "OR \"CompanyID\" = 0",
+            "OR ISNULL(\"CompanyID\", 0) = 0",
+            "OR \"CompanyID\" = 0"
+          ]
+        },
+        {
+          "id": 36,
+          "input": "ISNULL(CompanyID,0) = ISNULL({TransferOutwardDocument.CompanyID},0) OR (ISNULL(CompanyID,1) = 0)",
+          "filter": [
+            [
+              "CompanyID",
+              "=",
+              7,
+              {
+                "type": "ISNULL",
+                "position": "both",
+                "defaultValue": 0,
+                "defaultValueRight": 0
+              },
+              7
+            ],
+            "or",
+            [
+              "CompanyID",
+              "=",
+              null
+            ],
+            "or",
+            [
+              "CompanyID",
+              "=",
+              0,
+              {
+                "type": "ISNULL",
+                "position": "column",
+                "defaultValue": 1
+              },
+              0
+            ],
+            "or",
+            [
+              "CompanyID",
+              "=",
+              false
+            ]
+          ],
+          "expectedSql": [
+            "ISNULL(\"CompanyID\", 0) = ISNULL(7, 0)",
+            "OR \"CompanyID\" IS NULL",
+            "OR ISNULL(\"CompanyID\", 1) = 0",
+            "OR \"CompanyID\" = 0"
+          ]
+        },
+        {
+          "id": 38,
+          "input": "ISNULL(CompanyID,0) = ISNULL({LeadDocument.CompanyID},0)",
+          "filter": [
+            [
+              "CompanyID",
+              "=",
+              7,
+              {
+                "type": "ISNULL",
+                "position": "both",
+                "defaultValue": 0,
+                "defaultValueRight": 0
+              },
+              7
+            ],
+            "or",
+            [
+              "CompanyID",
+              "=",
+              null
+            ]
+          ],
+          "expectedSql": "ISNULL(\"CompanyID\", 0) = ISNULL(7, 0) OR \"CompanyID\" IS NULL"
+        },
+        {
+          "id": 39,
+          "input": "ISNULL(CompanyID,1) = ISNULL({LeadDocument.CompanyID},2)",
+          "filter": [
+            "CompanyID",
+            "=",
+            7,
+            {
+              "type": "ISNULL",
+              "position": "both",
+              "defaultValue": 1,
+              "defaultValueRight": 2
+            },
+            7
+          ],
+          "expectedSql": "ISNULL(\"CompanyID\", 1) = ISNULL(7, 2)"
+        },
+        {
+          "id": 44,
+          "input": "ISNULL(AllowSubDealer,0) = ISNULL({LeadDocument.AllowSubDealer},1)",
+          "filter": [
+            "AllowSubDealer",
+            "=",
+            true,
+            {
+              "type": "ISNULL",
+              "position": "both",
+              "defaultValue": 0,
+              "defaultValueRight": 1
+            },
+            true
+          ],
+          "expectedSql": "ISNULL(\"AllowSubDealer\", 0) = ISNULL(1, 1)"
+        }
+      ]
+    },
+    {
+      "name": "String operators, BETWEEN and escaping",
+      "cases": [
+        {
+          "id": 11,
+          "input": "FromDate Between '10-10-2021' AND '10-10-2022'",
+          "filter": [
+            "FromDate",
+            "between",
+            [
+              "10-10-2021",
+              "10-10-2022"
+            ]
+          ],
+          "expectedSql": "\"FromDate\" BETWEEN N'10-10-2021' AND N'10-10-2022'"
+        },
+        {
+          "id": 19,
+          "input": "CompanyName like '{LeadDocument.CompanyID}' AND BranchName not like '{LeadDocument.BranchID}'",
+          "filter": [
+            [
+              "CompanyName",
+              "contains",
+              "7"
+            ],
+            "and",
+            [
+              "BranchName",
+              "notcontains",
+              "42"
+            ]
+          ],
+          "expectedSql": [
+            "(ISNULL(CharIndEX(N'7',\"CompanyName\"), 0) > 0 )",
+            "AND not(ISNULL(CharIndEX(N'42',\"BranchName\"), 0) > 0 )"
+          ]
+        },
+        {
+          "id": 54,
+          "input": "CustomerName = 'O''Brien' AND Notes LIKE '%it''s%'",
+          "filter": [
+            [
+              "CustomerName",
+              "=",
+              "O'Brien"
+            ],
+            "and",
+            [
+              "Notes",
+              "contains",
+              "it's"
+            ]
+          ],
+          "expectedSql": [
+            "\"CustomerName\" = N'O''Brien'",
+            "AND (ISNULL(CharIndEX(N'it''s',\"Notes\"), 0) > 0 )"
+          ],
+          "note": "Single quotes in values must be escaped.",
+          "skip": {
+            "js": "JS sanitizer drops escaped quotes: 'O''Brien' becomes OBrien"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dropped by the JS converter (empty filter -> empty SQL)",
+      "cases": [
+        {
+          "id": 2,
+          "input": "GroupNo = {Employee.District} OR ISNULL(GroupNo,0) = 0 OR {Employee.District} = 0",
+          "filter": [],
+          "expectedSql": ""
+        },
+        {
+          "id": 20,
+          "input": "(RS2ID in ({SaleOrderStatusStmtGlobalRpt.StateID}) Or (ISNULL({SaleOrderStatusStmtGlobalRpt.StateID},0) =0)) And (RS3ID  in (0,{SaleOrderStatusStmtGlobalRpt.RegionID}) Or ISNULL({SaleOrderStatusStmtGlobalRpt.RegionID},0) =0 )",
+          "filter": [],
+          "expectedSql": ""
+        },
+        {
+          "id": 23,
+          "input": "null = 0",
+          "filter": [],
+          "expectedSql": ""
+        },
+        {
+          "id": 24,
+          "input": "null = null",
+          "filter": [],
+          "expectedSql": ""
+        },
+        {
+          "id": 25,
+          "input": "null = {SaleOrderStatusStmtGlobalRpt.StateID}",
+          "filter": [],
+          "expectedSql": ""
+        },
+        {
+          "id": 26,
+          "input": "null = {SaleOrderStatusStmtGlobalRpt.RegionID}",
+          "filter": [],
+          "expectedSql": ""
+        },
+        {
+          "id": 27,
+          "input": "null = {LeadDocument.CompanyID}",
+          "filter": [],
+          "expectedSql": ""
+        },
+        {
+          "id": 28,
+          "input": "{LeadDocument.BranchID} = null",
+          "filter": [],
+          "expectedSql": ""
+        },
+        {
+          "id": 29,
+          "input": "{LeadDocument.AllowSubDealer} != null",
+          "filter": [],
+          "expectedSql": ""
+        },
+        {
+          "id": 30,
+          "input": "ID = {SaleOrderStatusStmtGlobalRpt.RegionID}",
+          "filter": [],
+          "expectedSql": ""
+        },
+        {
+          "id": 50,
+          "input": "ID IN ({SampleDoc.AuthFilterID})",
+          "filter": [],
+          "expectedSql": ""
+        }
+      ]
+    }
+  ]
+}
