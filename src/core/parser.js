@@ -99,8 +99,11 @@ export function parse(input, variables = []) {
 		if (currentToken && currentToken.type === "operator") {
 			const operator = currentToken.value;
 			next(); // Move to the next token after the operator
-			const rightOperand = parseValue(); // Parse the value after the operator
 			const nodeType = LOGICAL_OPERATORS.includes(operator.toLowerCase()) ? "logical" : "comparison";
+			// After AND / OR the right side is a full expression (e.g. "(a = 1)" or "a = 1"), not a single value
+			const rightOperand = nodeType === "logical"
+				? parseExpression(OPERATOR_PRECEDENCE[operator.toUpperCase()] + 1)
+				: parseValue(); // Parse the value after the operator
 
 			if (nodeType === "logical") {
 				return { type: "logical", operator, left: { type: "function", name: functionName, args: functionArgs }, right: rightOperand };

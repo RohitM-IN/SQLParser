@@ -71,7 +71,10 @@
     "AdjustmentDocument.SupplierInvoiceNos": "INV1",
     "QuoteDocument.AllowedDocType": "10809,40927",
     "QuoteDocument.CompanyID": 2,
-    "QuoteDocument.IsVehicle": true
+    "QuoteDocument.IsVehicle": true,
+    "PurchaseOrderLine.ItemID": 42,
+    "PurchaseOrderLine.VarMatrixID0": null,
+    "PurchaseOrderLine.VarMatrixID1": 5
   },
   "groups": [
     {
@@ -322,12 +325,6 @@
             [
               "CompanyID",
               "=",
-              7
-            ],
-            "or",
-            [
-              "CompanyID",
-              "=",
               null,
               {
                 "type": "IS"
@@ -341,7 +338,8 @@
               42
             ]
           ],
-          "expectedSql": "\"CompanyID\" = 7 OR \"CompanyID\" IS NULL OR \"BranchID\" = 42"
+          "expectedSql": "\"CompanyID\" IS NULL OR \"BranchID\" = 42",
+          "note": "ISNULL(42, 0) = 0 is false, so the whole (... AND CompanyID = 7) group is false and dropped from the OR."
         },
         {
           "id": 32,
@@ -955,6 +953,73 @@
             "AND ( ISNULL(\"IsNonStock\", 0) = 1 OR \"IsNonStock\" = 1 ) )",
             "AND ( \"CompanyID\" = 7 OR ( \"CompanyID\" = 0 OR ISNULL(\"CompanyID\", 0) = 0 OR \"CompanyID\" = 0 ) )"
           ]
+        },
+        {
+          "id": 55,
+          "input": "(ISNULL(ItemID,0) = {PurchaseOrderLine.ItemID}) AND (varID = ISNULL({PurchaseOrderLine.VarMatrixID0}, 0) OR ({PurchaseOrderLine.VarMatrixID0} = 0 AND ISNULL(varID, 0) = 0))",
+          "filter": [
+            [
+              "ItemID",
+              "=",
+              42,
+              {
+                "type": "ISNULL",
+                "position": "column",
+                "defaultValue": 0
+              },
+              42
+            ],
+            "and",
+            [
+              "varID",
+              "=",
+              null,
+              {
+                "type": "ISNULL",
+                "position": "value",
+                "defaultValue": 0
+              },
+              null
+            ]
+          ],
+          "expectedSql": "ISNULL(\"ItemID\", 0) = 42 AND \"varID\" = ISNULL(NULL, 0)",
+          "note": "VarMatrixID0 is null: varID = ISNULL({VarMatrixID0}, 0) keeps the null with its ISNULL default (same as case 42), and {VarMatrixID0} = 0 is false (null only equals null), so that AND group is dropped."
+        },
+        {
+          "id": 56,
+          "input": "(ISNULL(ItemID,0) = {PurchaseOrderLine.ItemID}) AND (varID = {PurchaseOrderLine.VarMatrixID1} OR ({PurchaseOrderLine.VarMatrixID1} = 0 AND ISNULL(varID, 0) = 0))",
+          "filter": [
+            [
+              "ItemID",
+              "=",
+              42,
+              {
+                "type": "ISNULL",
+                "position": "column",
+                "defaultValue": 0
+              },
+              42
+            ],
+            "and",
+            [
+              "varID",
+              "=",
+              5
+            ]
+          ],
+          "expectedSql": "ISNULL(\"ItemID\", 0) = 42 AND \"varID\" = 5",
+          "note": "{VarMatrixID1} = 0 is false, so the whole AND group is false and dropped from the OR."
+        },
+        {
+          "id": 57,
+          "input": "ItemID = {PurchaseOrderLine.ItemID} OR ({PurchaseOrderLine.VarMatrixID0} = 5 AND varID = 2)",
+          "filter": [
+            "ItemID",
+            "=",
+            42
+          ],
+          "expectedSql": "\"ItemID\" = 42",
+          "note": "A null variable compared with a value is evaluated: null = 5 is false, so the AND group is dropped from the OR."
         }
       ]
     },

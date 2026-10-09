@@ -108,6 +108,7 @@ function DevExpressConverter() {
 
             // Short-circuit: always-false conditions
             if (left === false || right === false) {
+                if (operator === 'and') return false;
                 return left === false ? right : left;
             }
         }
@@ -244,6 +245,11 @@ function DevExpressConverter() {
         // otherwise OR branches like ISNULL(CompanyID,0)=param OR ISNULL(CompanyID,0)=0
         // can collapse to a full-match filter when param is null.
         if (EnableShortCircuit && IsValueNullShortCircuit && originalOperator !== "IS NOT" && (left == null || right == null) && !isLeftNullCheck && !isRightNullCheck) {
+            // No column involved (e.g. {var} = 0): evaluate null against the value instead of dropping it.
+            if (typeof ast.field !== "string") {
+                const evaluated = evaluateExpression(left, operatorToken, right, leftDefault, rightDefault);
+                if (evaluated === true || evaluated === false) return evaluated;
+            }
             return true; // If either value is null, return true for short-circuit evaluation
         }
 
@@ -549,10 +555,7 @@ function DevExpressConverter() {
 
         if ((left !== null && isNaN(left)) || (right !== null && isNaN(right))) return null;
 
-        // Handle NULL == 0 OR NULL == "" cases
-        if (left === null && (right == 0 || right == "")) return true;
-        if (right === null && (left == 0 || left == "")) return true;
-
+        // NULL only equals NULL (NULL = 0 is false); use ISNULL(x, 0) to treat NULL as 0
         if (left === null || right === null) {
             if (operator === '=' || operator === '==') return left === right;
             if (operator === '<>' || operator === '!=') return left !== right;
