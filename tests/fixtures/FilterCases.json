@@ -74,7 +74,12 @@
     "QuoteDocument.IsVehicle": true,
     "PurchaseOrderLine.ItemID": 42,
     "PurchaseOrderLine.VarMatrixID0": null,
-    "PurchaseOrderLine.VarMatrixID1": 5
+    "PurchaseOrderLine.VarMatrixID1": 5,
+    "SaleOrderDocument.AllowedDocType": "10809,40927",
+    "SaleOrderDocument.CompanyID": 2,
+    "SaleOrderDocument.CompanyContact": 15,
+    "SaleOrderDocument.ParentCompanyID": 3,
+    "SaleOrderDocument.IsVehicle": "True"
   },
   "groups": [
     {
@@ -1020,6 +1025,110 @@
           ],
           "expectedSql": "\"ItemID\" = 42",
           "note": "A null variable compared with a value is evaluated: null = 5 is false, so the AND group is dropped from the OR."
+        },
+        {
+          "id": 58,
+          "input": "DocType IN ({SaleOrderDocument.AllowedDocType}) AND ((ISNULL(IsDealer,0)=0 AND CompanyID={SaleOrderDocument.CompanyID}) OR (ISNULL(IsDealer,0)=1 AND CompanyContact={SaleOrderDocument.CompanyContact} AND CompanyID={SaleOrderDocument.ParentCompanyID})) AND ({SaleOrderDocument.IsVehicle}=0 OR ({SaleOrderDocument.IsVehicle}=1 AND EntityType=1004))",
+          "filter": [
+            [
+              [
+                "DocType",
+                "=",
+                "10809"
+              ],
+              "or",
+              [
+                "DocType",
+                "=",
+                "40927"
+              ]
+            ],
+            "and",
+            [
+              [
+                [
+                  [
+                    "IsDealer",
+                    "=",
+                    0
+                  ],
+                  "or",
+                  [
+                    "IsDealer",
+                    "=",
+                    null,
+                    {
+                      "type": "ISNULL",
+                      "position": "column",
+                      "defaultValue": 0
+                    },
+                    null
+                  ],
+                  "or",
+                  [
+                    "IsDealer",
+                    "=",
+                    false
+                  ]
+                ],
+                "and",
+                [
+                  "CompanyID",
+                  "=",
+                  2
+                ]
+              ],
+              "or",
+              [
+                [
+                  [
+                    [
+                      "IsDealer",
+                      "=",
+                      1,
+                      {
+                        "type": "ISNULL",
+                        "position": "column",
+                        "defaultValue": 0
+                      },
+                      1
+                    ],
+                    "or",
+                    [
+                      "IsDealer",
+                      "=",
+                      true
+                    ]
+                  ],
+                  "and",
+                  [
+                    "CompanyContact",
+                    "=",
+                    15
+                  ]
+                ],
+                "and",
+                [
+                  "CompanyID",
+                  "=",
+                  3
+                ]
+              ]
+            ],
+            "and",
+            [
+              "EntityType",
+              "=",
+              1004
+            ]
+          ],
+          "expectedSql": [
+            "( \"DocType\" = N'10809' OR \"DocType\" = N'40927' )",
+            "AND ( ( ( \"IsDealer\" = 0 OR ISNULL(\"IsDealer\", 0) = 0 OR \"IsDealer\" = 0 ) AND \"CompanyID\" = 2 )",
+            "OR ( ( ( ISNULL(\"IsDealer\", 0) = 1 OR \"IsDealer\" = 1 ) AND \"CompanyContact\" = 15 ) AND \"CompanyID\" = 3 ) )",
+            "AND \"EntityType\" = 1004"
+          ],
+          "note": "IsVehicle resolves to the string \"True\": it must be evaluated as a boolean, so {IsVehicle}=0 is false and {IsVehicle}=1 is true, leaving only EntityType = 1004 from the last group."
         }
       ]
     },

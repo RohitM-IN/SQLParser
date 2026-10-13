@@ -291,6 +291,27 @@ function DevExpressConverter() {
         return value === 0 || value === 1 ? Boolean(value) : value;
     }
 
+    /**
+     * Converts boolean and numeric strings to their literal values.
+     *
+     * "true"/"false" (case-insensitive) become booleans and numeric strings become numbers.
+     * Empty strings and any other value are returned unchanged.
+     *
+     * @param {*} value - The value to normalize.
+     * @returns {*} - The literal value, or the original value if it is not a boolean or numeric string.
+     */
+    function normalizeLiteralString(value) {
+        if (typeof value !== "string") return value;
+
+        const trimmed = value.trim();
+        const lower = trimmed.toLowerCase();
+        if (lower === "true") return true;
+        if (lower === "false") return false;
+        if (trimmed !== "" && !isNaN(trimmed)) return Number(trimmed);
+
+        return value;
+    }
+
 
     /**
      * Handles function calls, focusing on ISNULL.
@@ -552,6 +573,10 @@ function DevExpressConverter() {
     function evaluateExpression(left, operator, right, leftDefault, rightDefault) {
         if (left == null && leftDefault != undefined) left = leftDefault;
         if (right == null && rightDefault != undefined) right = rightDefault;
+
+        // Placeholders may resolve to strings like "1", "0", "true" or "False"
+        left = normalizeLiteralString(left);
+        right = normalizeLiteralString(right);
 
         if ((left !== null && isNaN(left)) || (right !== null && isNaN(right))) return null;
 
