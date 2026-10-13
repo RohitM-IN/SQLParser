@@ -42,5 +42,6 @@ export function convertAstToDevextreme(
         enableShortCircuit?: boolean;
         isValueNullShortCircuit?: boolean;
         treatNumberAsNullableBit?: boolean;
+        treatNullAsFalse?: boolean;
     }
 ): DevExpressFilter;

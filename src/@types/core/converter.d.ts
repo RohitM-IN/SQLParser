@@ -13,6 +13,7 @@ export interface ConvertOptions {
         enableShortCircuit?: boolean;
         isValueNullShortCircuit?: boolean;
         treatNumberAsNullableBit?: boolean;
+        treatNullAsFalse?: boolean;
     };
 }
 

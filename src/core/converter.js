@@ -10,6 +10,7 @@ function DevExpressConverter() {
     let EnableShortCircuit = true;
     let IsValueNullShortCircuit = false; // Flag to enable/disable null short-circuiting
     let TreatNumberAsNullableBit = false; // Flag to enable/disable optional boolean with number conversion
+    let TreatNullAsFalse = false; // Flag to evaluate null as equal to 0 / false / ""
 
     /**
    * Main conversion function that sets up the global context
@@ -18,14 +19,16 @@ function DevExpressConverter() {
    * @param {boolean} enableShortCircuit - Optional enabling and disabling the shortcircuit ie evaluating value = value scenario 
    * @param {boolean} isValueNullShortCircuit - Optional enabling and disabling the null shortcircuit ie evaluating value = null scenario
    * @param {boolean} treatNumberAsNullableBit - Optional enabling and disabling the optional boolean with number conversion
+   * @param {boolean} treatNullAsFalse - Optional evaluating null as equal to 0 / false / "" (e.g. {var} = 0 is true when var is null)
    * @returns {Array|null} DevExpress format filter
    */
-    function convert(ast, ResultObject = null, enableShortCircuit = true, isValueNullShortCircuit = false, treatNumberAsNullableBit = false) {
+    function convert(ast, ResultObject = null, enableShortCircuit = true, isValueNullShortCircuit = false, treatNumberAsNullableBit = false, treatNullAsFalse = false) {
         // Set up global context
         resultObject = ResultObject;
         EnableShortCircuit = enableShortCircuit;
         IsValueNullShortCircuit = isValueNullShortCircuit;
         TreatNumberAsNullableBit = treatNumberAsNullableBit;
+        TreatNullAsFalse = treatNullAsFalse;
 
         // Process the AST
         let result = processAstNode(ast);
@@ -580,6 +583,15 @@ function DevExpressConverter() {
 
         if ((left !== null && isNaN(left)) || (right !== null && isNaN(right))) return null;
 
+        // With TreatNullAsFalse, NULL behaves like 0 / false / "" (NULL = 0 is true)
+        if (TreatNullAsFalse && (left === null) !== (right === null)) {
+            const other = left === null ? right : left;
+            if (other === 0 || other === false || other === "") {
+                if (operator === '=' || operator === '==') return true;
+                if (operator === '<>' || operator === '!=') return false;
+            }
+        }
+
         // NULL only equals NULL (NULL = 0 is false); use ISNULL(x, 0) to treat NULL as 0
         if (left === null || right === null) {
             if (operator === '=' || operator === '==') return left === right;
@@ -617,9 +629,10 @@ const devExpressConverter = DevExpressConverter();
  * @param {boolean} options.enableShortCircuit - Enable or disable short-circuit evaluation
  * @param {boolean} options.isValueNullShortCircuit - Enable or disable null short-circuit evaluation
  * @param {boolean} options.treatNumberAsNullableBit  - Enable or disable optional boolean with number conversion
+ * @param {boolean} options.treatNullAsFalse - Evaluate null as equal to 0 / false / "" during short-circuit evaluation
  * @returns {Array|null} DevExpress format filter
  */
 export function convertToDevExpressFormat({ ast, resultObject = null, options = {} }) {
-    const { enableShortCircuit = true, isValueNullShortCircuit = false, treatNumberAsNullableBit = false } = options;
-    return devExpressConverter.init(ast, resultObject, enableShortCircuit, isValueNullShortCircuit, treatNumberAsNullableBit);
+    const { enableShortCircuit = true, isValueNullShortCircuit = false, treatNumberAsNullableBit = false, treatNullAsFalse = false } = options;
+    return devExpressConverter.init(ast, resultObject, enableShortCircuit, isValueNullShortCircuit, treatNumberAsNullableBit, treatNullAsFalse);
 }

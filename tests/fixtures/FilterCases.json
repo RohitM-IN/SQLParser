@@ -18,7 +18,8 @@
   ],
   "converterOptions": {
     "isValueNullShortCircuit": true,
-    "treatNumberAsNullableBit": true
+    "treatNumberAsNullableBit": true,
+    "treatNullAsFalse": true
   },
   "variables": {
     "SingleStepTransferDocument.CompanyID": 2,
@@ -976,19 +977,50 @@
             ],
             "and",
             [
-              "varID",
-              "=",
-              null,
-              {
-                "type": "ISNULL",
-                "position": "value",
-                "defaultValue": 0
-              },
-              null
+              [
+                "varID",
+                "=",
+                null,
+                {
+                  "type": "ISNULL",
+                  "position": "value",
+                  "defaultValue": 0
+                },
+                null
+              ],
+              "or",
+              [
+                [
+                  "varID",
+                  "=",
+                  0
+                ],
+                "or",
+                [
+                  "varID",
+                  "=",
+                  null,
+                  {
+                    "type": "ISNULL",
+                    "position": "column",
+                    "defaultValue": 0
+                  },
+                  null
+                ],
+                "or",
+                [
+                  "varID",
+                  "=",
+                  false
+                ]
+              ]
             ]
           ],
-          "expectedSql": "ISNULL(\"ItemID\", 0) = 42 AND \"varID\" = ISNULL(NULL, 0)",
-          "note": "VarMatrixID0 is null: varID = ISNULL({VarMatrixID0}, 0) keeps the null with its ISNULL default (same as case 42), and {VarMatrixID0} = 0 is false (null only equals null), so that AND group is dropped."
+          "expectedSql": [
+            "ISNULL(\"ItemID\", 0) = 42",
+            "AND ( \"varID\" = ISNULL(NULL, 0) OR ( \"varID\" = 0 OR ISNULL(\"varID\", 0) = 0 OR \"varID\" = 0 ) )"
+          ],
+          "note": "VarMatrixID0 is null: varID = ISNULL({VarMatrixID0}, 0) keeps the null with its ISNULL default (same as case 42). With treatNullAsFalse, {VarMatrixID0} = 0 is true (null is treated as 0), so that AND group reduces to ISNULL(varID, 0) = 0."
         },
         {
           "id": 56,
